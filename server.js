@@ -9,5 +9,3 @@ app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/v1/health\n`);
 });
-
-console.log(require('crypto').randomBytes(32).toString('hex'))

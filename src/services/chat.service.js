@@ -38,7 +38,7 @@ async function getCustomerRooms(customerId) {
 // Get messages in room
 async function getMessages(chatRoomId, userId) {
   const room = await prisma.chatRoom.findFirst({
-    where: { id: chatRoomId, OR: [{ adminId: userId }, { customerId: userId }] },
+    where: { id: BigInt(chatRoomId), OR: [{ adminId: BigInt(userId) }, { customerId: BigInt(userId) }] },
   });
   if (!room) throw new AppError("Chat room not found", 404);
 
@@ -50,7 +50,7 @@ async function getMessages(chatRoomId, userId) {
 
 // Send message
 async function sendMessage(chatRoomId, { senderType, adminId, customerId, content }) {
-  const room = await prisma.chatRoom.findUnique({ where: { id: chatRoomId } });
+  const room = await prisma.chatRoom.findUnique({ where: { id: BigInt(chatRoomId) } });
   if (!room) throw new AppError("Chat room not found", 404);
 
   const message = await prisma.chatMessage.create({
@@ -66,7 +66,7 @@ async function sendMessage(chatRoomId, { senderType, adminId, customerId, conten
 async function markAsRead(chatRoomId, readerType) {
   const oppositeType = readerType === "ADMIN" ? "CUSTOMER" : "ADMIN";
   return prisma.chatMessage.updateMany({
-    where: { chatRoomId, senderType: oppositeType, isRead: false },
+    where: { chatRoomId: BigInt(chatRoomId), senderType: oppositeType, isRead: false },
     data: { isRead: true },
   });
 }

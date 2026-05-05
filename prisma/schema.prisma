@@ -11,7 +11,6 @@ datasource db {
 
 enum AdminRole {
   ADMIN
-  MANAGER
   STAFF
 }
 
@@ -23,25 +22,34 @@ enum ProductType {
 
 enum MaterialType {
   FDM
-  SLA
+  RESIN
 }
 
 enum MaterialUnit {
+  GRAM
+  PIECE
   ROLL
   BOX
 }
 
-enum ToolCategory {
-  HAND_TOOL
-  POST_TOOL
+enum OrderStatus {
+  COMPLETED
+  CANCELED
+  PENDING
 }
 
-enum OrderStatus {
-  PENDING
+enum PaymentStatus {
   PAID
-  CANCELLED
-  REFUND_PENDING
+  PENDING
   REFUNDED
+  REFUNDING
+  FAILED
+}
+
+enum PaymentMethod {
+  COD
+  BANK_TRANSFER
+  ZALOPAY
 }
 
 enum DiscountType {
@@ -54,52 +62,56 @@ enum ChatMessageSender {
   CUSTOMER
 }
 
-// ─── Admin Users (Staff / Managers / Admins) ─────────
+enum Gender {
+  M
+  F
+}
+
+// ─── Admin Users (Staff / Admins) ─────────
 
 model AdminUser {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique
-  password       String
-  fullName       String?
-  phone          String?
-  slug           String    @unique
-  role           AdminRole @default(STAFF)
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  id        BigInt    @id @default(autoincrement())
+  email     String    @unique @db.VarChar(50)
+  password  String    @db.VarChar(100)
+  fullName  String    @db.VarChar(100)
+  phone     String    @unique @db.VarChar(15)
+  role      AdminRole @default(STAFF)
+  isActive  Boolean   @default(false)
+  createdAt DateTime  @default(now()) @db.Timestamp
+  updatedAt DateTime  @default(now()) @updatedAt @db.Timestamp
+  deletedAt DateTime? @db.Timestamp
 
-  articles       Article[]
-  orders         Order[]        @relation("AssignedAdmin")
-  chatRooms      ChatRoom[]
-  chatMessages   ChatMessage[]
+  articles     Article[]
+  chatRooms    ChatRoom[]
+  chatMessages ChatMessage[]
 
   @@index([email])
-  @@index([slug])
-  @@index([role])
+  @@index([createdAt])
   @@map("admin_users")
 }
 
-// ─── Customers (E-commerce Users) ────────────────────
+// ─── Users (Customers) ────────────────────
 
 model Customer {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique
-  password       String
-  fullName       String?
-  phone          String?
-  address        String?
-  slug           String    @unique
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  id          BigInt    @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  fullName    String?
+  phone       String?
+  address     String?
+  dateOfBirth DateTime?
+  gender      Gender?
+  slug        String    @unique
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
-  orders         Order[]
-  cartItems      CartItem[]
-  chatRooms      ChatRoom[]
-  chatMessages   ChatMessage[]
-  activityLogs   CustomerActivityLog[]
+  orders       Order[]
+  cartItems    CartItem[]
+  chatRooms    ChatRoom[]
+  chatMessages ChatMessage[]
+  activityLogs CustomerActivityLog[]
 
   @@index([email])
   @@index([slug])
@@ -109,86 +121,92 @@ model Customer {
 // ─── Catalog ─────────────────────────────────────────
 
 model Collection {
-  id             Int       @id @default(autoincrement())
-  name           String    @unique
-  slug           String    @unique
-  description    String?
-  image          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  id          BigInt  @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  image       String?
+  isActive    Boolean @default(true)
 
-  products       Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
 
   @@index([slug])
   @@map("collections")
 }
 
 model Product {
-  id             Int         @id @default(autoincrement())
-  name           String      @unique
-  slug           String      @unique
-  sku            String      @unique
-  description    String?
-  price          Float
-  type           ProductType
-  image          String?
-  collectionId   Int?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  deletedAt      DateTime?
+  id                BigInt      @id @default(autoincrement())
+  name              String      @unique
+  slug              String      @unique
+  thumbnail         String?
+  description       String?
+  type              ProductType
+  collectionId      BigInt?
+  discountCampainId BigInt?
+  isActive          Boolean     @default(true)
 
-  collection     Collection? @relation(fields: [collectionId], references: [id])
-  model3D        Model3D?
-  material       Material?
-  tool           Tool?
-  orderItems     OrderItem[]
-  cartItems      CartItem[]
+  stock           Int      @default(0)
+  basePrice       Float
+  discountedPrice Float?
+  images          String[]
+  ratingAvg       Float    @default(0)
 
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  model3D         Model3D?
+  material        Material?
+  tool            Tool?
+  orderItems      OrderItem[]
+  collection      Collection? @relation(fields: [collectionId], references: [id])
+  discountCampain Discount?   @relation(fields: [discountCampainId], references: [id])
+
+  @@index([slug])
   @@index([collectionId])
   @@index([type])
-  @@index([slug])
   @@map("products")
 }
 
 model Model3D {
-  id             Int       @id @default(autoincrement())
-  productId      Int       @unique
-  name           String
-  fileUrl        String
-  thumbnail      String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id        BigInt   @id @default(autoincrement())
+  productId BigInt   @unique
+  fileUrl   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("model_3d")
 }
 
 model Material {
-  id             Int          @id @default(autoincrement())
-  productId      Int          @unique
-  type           MaterialType
-  color          String?
-  unit           MaterialUnit
-  quantity       Float
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id        BigInt       @id @default(autoincrement())
+  productId BigInt       @unique
+  type      MaterialType
+  color     String?
+  unit      MaterialUnit
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("materials")
 }
 
 model Tool {
-  id             Int          @id @default(autoincrement())
-  productId      Int          @unique
-  category       ToolCategory
+  id             BigInt   @id @default(autoincrement())
+  slug           String   @unique
+  productId      BigInt   @unique
   specifications String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("tools")
 }
@@ -196,52 +214,53 @@ model Tool {
 // ─── Orders & Cart ───────────────────────────────────
 
 model Order {
-  id               Int         @id @default(autoincrement())
-  orderNumber      String      @unique
-  customerId       Int
-  assignedAdminId  Int?
-  totalAmount      Float
-  status           OrderStatus @default(PENDING)
-  shippingAddress  String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  deletedAt        DateTime?
+  id              BigInt        @id @default(autoincrement())
+  customerId      BigInt
+  shippingAddress String
+  note            String?       @db.VarChar(255)
+  shippingFee     Float         @default(0.00)
+  discountAmount  Float         @default(0.00)
+  totalAmount     Float
+  paidAt          DateTime?
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(BANK_TRANSFER)
+  paymentStatus   PaymentStatus @default(PENDING)
 
-  customer         Customer    @relation(fields: [customerId], references: [id])
-  assignedAdmin    AdminUser?  @relation("AssignedAdmin", fields: [assignedAdminId], references: [id])
-  items            OrderItem[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  items          OrderItem[]
+  discountOrders DiscountOrder[]
 
   @@index([customerId])
-  @@index([assignedAdminId])
-  @@index([status])
   @@map("orders")
 }
 
 model OrderItem {
-  id             Int       @id @default(autoincrement())
-  orderId        Int
-  productId      Int
-  quantity       Int       @default(1)
-  unitPrice      Float
-  createdAt      DateTime  @default(now())
+  id        BigInt @id @default(autoincrement())
+  orderId   BigInt
+  productId BigInt
+  quantity  Int    @default(1)
 
-  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product        Product   @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
 
   @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
 model CartItem {
-  id             Int       @id @default(autoincrement())
-  customerId     Int
-  productId      Int
-  quantity       Int       @default(1)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id         BigInt   @id @default(autoincrement())
+  customerId BigInt
+  productId  BigInt
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  product        Product   @relation(fields: [productId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@unique([customerId, productId])
   @@index([customerId])
@@ -251,8 +270,9 @@ model CartItem {
 // ─── Discounts ───────────────────────────────────────
 
 model Discount {
-  id             Int          @id @default(autoincrement())
+  id             BigInt       @id @default(autoincrement())
   code           String       @unique
+  name           String
   slug           String       @unique
   type           DiscountType
   value          Float
@@ -265,26 +285,43 @@ model Discount {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  products Product[]
+
   @@index([code])
   @@index([slug])
   @@map("discounts")
 }
 
+model DiscountOrder {
+  id        BigInt    @id @default(autoincrement())
+  code      String?   @db.VarChar(10)
+  name      String?   @db.VarChar(50)
+  orderId   BigInt    @db.BigInt
+  value     Float     @default(10000.00)
+  startsAt  DateTime  @default(now())
+  expiresAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("discount_orders")
+}
+
 // ─── Articles (Multi-language) ───────────────────────
 
 model Article {
-  id             Int       @id @default(autoincrement())
-  slug           String    @unique
-  authorId       Int
-  coverImage     String?
-  isPublished    Boolean   @default(false)
-  publishedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  id          BigInt    @id @default(autoincrement())
+  slug        String    @unique
+  authorId    BigInt
+  coverImage  String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
-  author         AdminUser @relation(fields: [authorId], references: [id])
-  translations   ArticleTranslation[]
+  author       AdminUser            @relation(fields: [authorId], references: [id])
+  translations ArticleTranslation[]
 
   @@index([slug])
   @@index([authorId])
@@ -292,16 +329,16 @@ model Article {
 }
 
 model ArticleTranslation {
-  id             Int       @id @default(autoincrement())
-  articleId      Int
-  locale         String    @db.VarChar(10)
-  title          String
-  content        String
-  summary        String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id        BigInt   @id @default(autoincrement())
+  articleId BigInt
+  locale    String   @db.VarChar(10)
+  title     String
+  content   String
+  summary   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  article        Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@unique([articleId, locale])
   @@map("article_translations")
@@ -310,16 +347,16 @@ model ArticleTranslation {
 // ─── Chat System ─────────────────────────────────────
 
 model ChatRoom {
-  id             Int       @id @default(autoincrement())
-  adminId        Int
-  customerId     Int
-  isActive       Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id         BigInt   @id @default(autoincrement())
+  adminId    BigInt
+  customerId BigInt
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  admin          AdminUser @relation(fields: [adminId], references: [id])
-  customer       Customer  @relation(fields: [customerId], references: [id])
-  messages       ChatMessage[]
+  admin    AdminUser     @relation(fields: [adminId], references: [id])
+  customer Customer      @relation(fields: [customerId], references: [id])
+  messages ChatMessage[]
 
   @@unique([adminId, customerId])
   @@index([adminId])
@@ -328,18 +365,18 @@ model ChatRoom {
 }
 
 model ChatMessage {
-  id             Int               @id @default(autoincrement())
-  chatRoomId     Int
-  senderType     ChatMessageSender
-  adminId        Int?
-  customerId     Int?
-  content        String
-  isRead         Boolean           @default(false)
-  createdAt      DateTime          @default(now())
+  id         BigInt            @id @default(autoincrement())
+  chatRoomId BigInt
+  senderType ChatMessageSender
+  adminId    BigInt?
+  customerId BigInt?
+  content    String
+  isRead     Boolean           @default(false)
+  createdAt  DateTime          @default(now())
 
-  chatRoom       ChatRoom          @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
-  admin          AdminUser?        @relation(fields: [adminId], references: [id])
-  customer       Customer?         @relation(fields: [customerId], references: [id])
+  chatRoom ChatRoom   @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  admin    AdminUser? @relation(fields: [adminId], references: [id])
+  customer Customer?  @relation(fields: [customerId], references: [id])
 
   @@index([chatRoomId])
   @@index([createdAt])
@@ -349,13 +386,13 @@ model ChatMessage {
 // ─── Activity Logs ───────────────────────────────────
 
 model CustomerActivityLog {
-  id             Int       @id @default(autoincrement())
-  customerId     Int
-  action         String
-  metadata       String?
-  createdAt      DateTime  @default(now())
+  id         BigInt   @id @default(autoincrement())
+  customerId BigInt
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
-  customer       Customer  @relation(fields: [customerId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
 
   @@index([customerId])
   @@index([createdAt])

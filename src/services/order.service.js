@@ -45,13 +45,13 @@ async function getMyOrders(customerId) {
 // Cancel order
 async function cancelOrder(id, customerId) {
   const order = await prisma.order.findFirst({
-    where: { id: parseInt(id), customerId },
+    where: { id: BigInt(id), customerId },
   });
   if (!order) throw new AppError("Order not found", 404);
   if (order.status !== "PENDING") throw new AppError("Only pending orders can be cancelled", 400);
 
   return prisma.order.update({
-    where: { id: parseInt(id) },
+    where: { id: BigInt(id) },
     data: { status: "CANCELLED" },
   });
 }

@@ -16,7 +16,7 @@ async function getAllOrders(query = {}) {
     where: {
       deletedAt: null,
       ...(query.status && { status: query.status }),
-      ...(query.adminId && { assignedAdminId: parseInt(query.adminId) }),
+      ...(query.adminId && { assignedAdminId: BigInt(query.adminId) }),
     },
     include: {
       customer: { select: { id: true, fullName: true, email: true } },
@@ -52,11 +52,11 @@ async function getAdminRevenue() {
 
 // Update order status
 async function updateOrderStatus(id, status, assignedAdminId) {
-  const order = await prisma.order.findUnique({ where: { id: parseInt(id) } });
+  const order = await prisma.order.findUnique({ where: { id: BigInt(id) } });
   if (!order) throw new AppError("Order not found", 404);
 
   return prisma.order.update({
-    where: { id: parseInt(id) },
+    where: { id: BigInt(id) },
     data: { status, ...(assignedAdminId && { assignedAdminId }) },
     include: { items: { include: { product: true } } },
   });
