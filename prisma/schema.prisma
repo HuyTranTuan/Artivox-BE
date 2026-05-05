@@ -104,7 +104,7 @@ model Customer {
   slug        String    @unique
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
   deletedAt   DateTime?
 
   orders       Order[]
@@ -129,7 +129,7 @@ model Collection {
   isActive    Boolean @default(true)
 
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   products Product[]
@@ -156,7 +156,7 @@ model Product {
   ratingAvg       Float    @default(0)
 
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   model3D         Model3D?
@@ -177,7 +177,7 @@ model Model3D {
   productId BigInt   @unique
   fileUrl   String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -191,7 +191,7 @@ model Material {
   color     String?
   unit      MaterialUnit
   createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  updatedAt DateTime     @default(now()) @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -204,7 +204,7 @@ model Tool {
   productId      BigInt   @unique
   specifications String?
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime @default(now()) @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -227,7 +227,7 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
 
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   customer       Customer        @relation(fields: [customerId], references: [id])
@@ -258,7 +258,7 @@ model CartItem {
   productId  BigInt
   quantity   Int      @default(1)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
@@ -283,7 +283,7 @@ model Discount {
   startsAt       DateTime?
   expiresAt      DateTime?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime     @default(now()) @updatedAt
 
   products Product[]
 
@@ -317,7 +317,7 @@ model Article {
   isPublished Boolean   @default(false)
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime  @default(now()) @updatedAt
   deletedAt   DateTime?
 
   author       AdminUser            @relation(fields: [authorId], references: [id])
@@ -336,7 +336,7 @@ model ArticleTranslation {
   content   String
   summary   String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
@@ -352,7 +352,7 @@ model ChatRoom {
   customerId BigInt
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  updatedAt  DateTime @default(now()) @updatedAt
 
   admin    AdminUser     @relation(fields: [adminId], references: [id])
   customer Customer      @relation(fields: [customerId], references: [id])
