@@ -1,0 +1,25 @@
+module.exports = {
+  ROLES: {
+    ADMIN: "ADMIN",
+    MANAGER: "MANAGER",
+    STAFF: "STAFF",
+    CUSTOMER: "CUSTOMER",
+  },
+  ORDER_STATUS: {
+    PENDING: "PENDING",
+    PAID: "PAID",
+    CANCELLED: "CANCELLED",
+    REFUND_PENDING: "REFUND_PENDING",
+    REFUNDED: "REFUNDED",
+  },
+  PRODUCT_TYPES: {
+    MODEL: "MODEL",
+    MATERIAL: "MATERIAL",
+    TOOL: "TOOL",
+  },
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 20,
+    MAX_LIMIT: 100,
+  },
+};
