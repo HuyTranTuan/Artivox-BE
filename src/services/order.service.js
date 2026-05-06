@@ -56,4 +56,31 @@ async function cancelOrder(id, customerId) {
   });
 }
 
-module.exports = { createOrder, getMyOrders, cancelOrder };
+/**
+ * Fetch all orders with order items.
+ */
+async function getAllOrders() {
+  return prisma.order.findMany({
+    where: { deletedAt: null },
+    include: {
+      items: { include: { product: true } },
+      customer: { select: { id: true, fullName: true, email: true, slug: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Fetch a single order by id with order items.
+ */
+async function getOrderById(id) {
+  return prisma.order.findFirst({
+    where: { id: BigInt(id), deletedAt: null },
+    include: {
+      items: { include: { product: true } },
+      customer: { select: { id: true, fullName: true, email: true, slug: true } },
+    },
+  });
+}
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById };

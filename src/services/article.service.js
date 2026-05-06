@@ -81,4 +81,33 @@ async function deleteArticle(slug, authorId) {
   });
 }
 
-module.exports = { createArticle, getArticles, getArticleBySlug, updateArticle, deleteArticle };
+/**
+ * Get articles by locale (only published articles).
+ */
+async function getArticlesByLocale(locale) {
+  return prisma.article.findMany({
+    where: { deletedAt: null, isPublished: true, translations: { some: { locale } } },
+    include: {
+      translations: { where: { locale } },
+      author: { select: { id: true, fullName: true, slug: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+/**
+ * Get article by slug and locale (must be published).
+ */
+async function getArticleBySlugAndLocale(slug, locale) {
+  const article = await prisma.article.findFirst({
+    where: { slug, deletedAt: null, isPublished: true, translations: { some: { locale } } },
+    include: {
+      translations: { where: { locale } },
+      author: { select: { id: true, fullName: true, slug: true } },
+    },
+  });
+  if (!article) throw new AppError("Article not found", 404);
+  return article;
+}
+
+module.exports = { createArticle, getArticles, getArticleBySlug, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale };

@@ -11,6 +11,17 @@ async function getMaterials() {
   });
 }
 
+/**
+ * Fetch a single material product by slug.
+ */
+async function getMaterialBySlug(slug) {
+  return prisma.product.findFirst({
+    where: { slug, deletedAt: null, type: "MATERIAL" },
+    include: { material: true, collection: true },
+  });
+}
+
 module.exports = {
   getMaterials,
+  getMaterialBySlug,
 };

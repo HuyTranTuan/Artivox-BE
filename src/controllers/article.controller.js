@@ -26,4 +26,16 @@ const deleteArticle = catchAsync(async (req, res) => {
   return res.success(null, "Article deleted");
 });
 
-module.exports = { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle };
+// Get articles by locale (vi or en)
+const getArticlesByLocale = catchAsync(async (req, res) => {
+  const data = await articleService.getArticlesByLocale(req.params.locale);
+  return res.success(data, "Articles fetched");
+});
+
+// Get article by slug and locale (vi or en)
+const getArticleBySlugAndLocale = catchAsync(async (req, res) => {
+  const data = await articleService.getArticleBySlugAndLocale(req.params.slug, req.params.locale);
+  return res.success(data, "Article fetched");
+});
+
+module.exports = { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale };

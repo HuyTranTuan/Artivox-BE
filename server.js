@@ -1,5 +1,8 @@
 // Load module aliases first
 require("module-alias/register");
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 
 const app = require("@/index");
 

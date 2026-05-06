@@ -4,7 +4,13 @@ const { authMiddleware, restrictTo } = require("@middlewares/auth.middleware");
 
 const router = express.Router();
 
-// Public
+// Public - locale specific (must come before generic :slug)
+router.get("/articles/vi", (req, res, next) => { req.params.locale = "vi"; next(); }, articleController.getArticlesByLocale);
+router.get("/articles/en", (req, res, next) => { req.params.locale = "en"; next(); }, articleController.getArticlesByLocale);
+router.get("/articles/vi/:slug", (req, res, next) => { req.params.locale = "vi"; next(); }, articleController.getArticleBySlugAndLocale);
+router.get("/articles/en/:slug", (req, res, next) => { req.params.locale = "en"; next(); }, articleController.getArticleBySlugAndLocale);
+
+// Public - general
 router.get("/articles", articleController.getArticles);
 router.get("/articles/:slug", articleController.getArticleBySlug);
 

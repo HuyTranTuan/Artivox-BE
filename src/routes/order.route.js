@@ -4,8 +4,12 @@ const { authMiddleware } = require("@middlewares/auth.middleware");
 
 const router = express.Router();
 
-router.use(authMiddleware);
+// Public routes
+router.get("/", orderController.getAllOrders);
+router.get("/:id", orderController.getOrderById);
 
+// Protected routes
+router.use(authMiddleware);
 router.post("/", orderController.createOrder);
 router.get("/me", orderController.getMyOrders);
 router.post("/:id/cancel", orderController.cancelOrder);
