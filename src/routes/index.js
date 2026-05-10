@@ -11,19 +11,20 @@ const customerRoutes = require("@routes/customer.route");
 const discountRoutes = require("@routes/discount.route");
 const discountOrderRoutes = require("@routes/discountOrder.route");
 const customerActivityLogRoutes = require("@routes/customerActivityLog.route");
+const { authMiddleware } = require("@/middlewares/auth.middleware");
 
 const router = express.Router();
 
-router.get("/health", (req, res) => {
-  res.success({ service: "artivox-be", status: "ok" }, "Service healthy");
-});
-
+//////// Authorization /////////
 router.use("/auth", authRoutes);
-router.use("/", catalogRoutes);
+
+//////// Authorization /////////
+router.use("/admin", adminRoutes);
+
+router.use("/dashboard", catalogRoutes);
 router.use("/cart", cartRoutes);
 router.use("/orders", orderRoutes);
 router.use("/", articleRoutes);
-router.use("/admin", adminRoutes);
 router.use("/chat", chatRoutes);
 router.use("/customers", customerRoutes);
 router.use("/discounts", discountRoutes);

@@ -1,4 +1,4 @@
-const AppError = require("@utils/AppError");
+const { PRISMA_ERRORS, HTTP_CODES } = require("@/config/constants");
 
 // Global error handler middleware
 const errorMiddleware = (err, req, res, next) => {
@@ -22,7 +22,11 @@ const errorMiddleware = (err, req, res, next) => {
     });
   }
 
-  console.error("ERROR 💥:", err);
+  if (err?.code === PRISMA_ERRORS.DUPLICATE) {
+    return res.error({ message: "Duplicate entry." }, HTTP_CODES.CONFLICT);
+  }
+
+  console.error("ERROR 💥:", err.status);
   return res.status(500).json({
     status: "error",
     message: "Something went wrong",

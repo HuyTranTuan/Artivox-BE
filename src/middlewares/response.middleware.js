@@ -1,4 +1,4 @@
-// Attach res.success() and res.fail() helpers
+// Attach res.success() and res.error() helpers
 const responseMiddleware = (req, res, next) => {
   res.success = (data, message = "Success", statusCode = 200) => {
     return res.status(statusCode).json({
@@ -8,9 +8,9 @@ const responseMiddleware = (req, res, next) => {
     });
   };
 
-  res.fail = (message = "Bad Request", statusCode = 400, errors = null) => {
+  res.error = (message = "Bad Request", statusCode = 400, errors = null) => {
     return res.status(statusCode).json({
-      status: "fail",
+      status: "error",
       message,
       ...(errors && { errors }),
     });

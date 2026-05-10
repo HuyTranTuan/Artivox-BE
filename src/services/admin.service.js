@@ -1,10 +1,12 @@
+const { jwtSecret } = require("@/config/auth");
 const { prisma } = require("@libs/prisma");
 const AppError = require("@utils/AppError");
+const jwt = require("jsonwebtoken");
 
 // Get all admin users
 async function getAdminUsers() {
   return prisma.adminUser.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, role: "STAFF" },
     select: { id: true, email: true, fullName: true, slug: true, role: true, isActive: true, createdAt: true },
     orderBy: { createdAt: "desc" },
   });
@@ -32,7 +34,10 @@ async function getAdminRevenue() {
   const admins = await prisma.adminUser.findMany({
     where: { deletedAt: null },
     select: {
-      id: true, fullName: true, slug: true, role: true,
+      id: true,
+      fullName: true,
+      slug: true,
+      role: true,
       orders: {
         where: { status: { in: ["PAID"] }, deletedAt: null },
         select: { totalAmount: true },

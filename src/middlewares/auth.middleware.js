@@ -1,25 +1,41 @@
 const jwt = require("jsonwebtoken");
-const AppError = require("@utils/AppError");
-const { jwtSecret } = require("@config/auth");
+const { jwtSecret, jwtRefreshSecret } = require("@config/auth");
+const { HTTP_CODES } = require("@/config/constants");
+const authService = require("@services/auth.service");
 
 // Verify JWT token
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new AppError("No token provided", 401);
+      return res.error(false, "No token provided", HTTP_CODES.UNAUTHORIZED);
     }
 
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded;
+    req.newTokens = token;
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
-      return next(new AppError("Invalid token", 401));
+      return next(res.error(false, "Invalid token", HTTP_CODES.UNAUTHORIZED));
     }
     if (error.name === "TokenExpiredError") {
-      return next(new AppError("Token expired", 401));
+      // Try to refresh the token using refresh token from header
+      const refreshToken = req.headers["x-refresh-token"];
+      if (!refreshToken) {
+        return next(res.error(false, "Token expired", HTTP_CODES.UNAUTHORIZED));
+      }
+
+      try {
+        const tokens = await authService.refreshToken(refreshToken);
+        const decoded = jwt.verify(tokens.accessToken, jwtSecret);
+        req.user = decoded;
+        req.newTokens = tokens;
+        return next();
+      } catch (refreshError) {
+        return next(res.error(false, "Session expired", HTTP_CODES.UNAUTHORIZED));
+      }
     }
     next(error);
   }
@@ -29,7 +45,7 @@ const authMiddleware = (req, res, next) => {
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return next(new AppError("Unauthorized access", 403));
+      return next(res.error(false, "Unauthorized access", HTTP_CODES.FORBIDDEN));
     }
     next();
   };
