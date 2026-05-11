@@ -6,12 +6,12 @@ const router = express.Router();
 
 // Public routes
 router.get("/", orderController.getAllOrders);
-router.get("/:id", orderController.getOrderById);
+router.get("/:orderId", orderController.getOrderById);
 
 // Protected routes
 router.use(authMiddleware);
 router.post("/", orderController.createOrder);
 router.get("/me", orderController.getMyOrders);
-router.post("/:id/cancel", orderController.cancelOrder);
+router.post("/:orderId/cancel", orderController.cancelOrder);
 
 module.exports = router;

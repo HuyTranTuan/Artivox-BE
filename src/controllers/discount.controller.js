@@ -1,6 +1,5 @@
 const discountService = require("@services/discount.service");
 const catchAsync = require("@utils/catchAsync");
-const AppError = require("@utils/AppError");
 
 // Fetch all discounts
 const getDiscounts = catchAsync(async (req, res) => {
@@ -11,7 +10,7 @@ const getDiscounts = catchAsync(async (req, res) => {
 // Fetch a single discount by slug
 const getDiscountBySlug = catchAsync(async (req, res) => {
   const data = await discountService.getDiscountBySlug(req.params.slug);
-  if (!data) throw new AppError("Discount not found", 404);
+  if (!data) return res.notFound();
   return res.success(data, "Discount detail fetched");
 });
 

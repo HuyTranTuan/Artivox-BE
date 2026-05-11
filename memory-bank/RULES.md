@@ -12,7 +12,7 @@
 
 - **MVC Pattern**: Controllers orchestrate, Services execute, Models query
 - **Middleware First**: Register all middleware before routes
-- **Error Handling**: Throw AppError, let error middleware catch
+- **Error Handling**: Throw Error, let error middleware catch
 - **Validation**: Use Zod schemas in validators/, validate in middleware
 
 ## Database
@@ -44,7 +44,7 @@ npm run prisma:studio        # Database UI
 - Import specific services (not catalog.service)
 - Validate parameters in middleware (not controller)
 - Thin layer: just call service + format response
-- Always use res.success(data) or throw AppError
+- Always use res.success(data) or throw Error
 
 ## Route Pattern
 

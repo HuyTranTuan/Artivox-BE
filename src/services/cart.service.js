@@ -1,5 +1,4 @@
 const { prisma } = require("@libs/prisma");
-const AppError = require("@utils/AppError");
 
 // Get customer cart
 async function getCart(customerId) {
@@ -15,7 +14,7 @@ async function addToCart(customerId, productId, quantity = 1) {
   const product = await prisma.product.findFirst({
     where: { id: productId, deletedAt: null },
   });
-  if (!product) throw new AppError("Product not found", 404);
+  if (!product) return res.notFound();
 
   return prisma.cartItem.upsert({
     where: { customerId_productId: { customerId, productId } },
@@ -27,7 +26,7 @@ async function addToCart(customerId, productId, quantity = 1) {
 // Update cart item quantity
 async function updateCartItem(id, customerId, quantity) {
   const item = await prisma.cartItem.findFirst({ where: { id: BigInt(id), customerId } });
-  if (!item) throw new AppError("Cart item not found", 404);
+  if (!item) return res.notFound();
 
   return prisma.cartItem.update({
     where: { id: BigInt(id) },
@@ -38,7 +37,7 @@ async function updateCartItem(id, customerId, quantity) {
 // Remove from cart
 async function removeFromCart(id, customerId) {
   const item = await prisma.cartItem.findFirst({ where: { id: BigInt(id), customerId } });
-  if (!item) throw new AppError("Cart item not found", 404);
+  if (!item) return res.notFound();
 
   return prisma.cartItem.delete({ where: { id: BigInt(id) } });
 }

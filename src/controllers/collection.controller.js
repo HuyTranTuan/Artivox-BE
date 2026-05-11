@@ -1,6 +1,5 @@
 const collectionService = require("@services/collection.service");
 const catchAsync = require("@utils/catchAsync");
-const AppError = require("@utils/AppError");
 
 const getCollections = catchAsync(async (req, res) => {
   const data = await collectionService.getCollections();
@@ -9,7 +8,7 @@ const getCollections = catchAsync(async (req, res) => {
 
 const getCollectionBySlug = catchAsync(async (req, res) => {
   const data = await collectionService.getCollectionBySlug(req.params.slug);
-  if (!data) throw new AppError("Collection not found", 404);
+  if (!data) return res.notFound();
   return res.success(data, "Collection detail fetched");
 });
 

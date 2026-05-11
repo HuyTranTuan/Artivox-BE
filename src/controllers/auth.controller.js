@@ -1,18 +1,11 @@
 const authService = require("@services/auth.service");
 const catchAsync = require("@utils/catchAsync");
-const { HTTP_CODES } = require("@config/constants");
 
 /////////// Admin Auth ///////////////
 const adminLogin = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const data = await authService.adminLogin(email, password);
   return res.success(data, "Login successful");
-});
-
-const adminCreateStaff = catchAsync(async (req, res) => {
-  const { email, password, fullName, phone, address } = req.body;
-  const data = await authService.adminCreate(email, password, fullName, phone, address);
-  return res.success(data, "Created Successed!", HTTP_CODES.CREATED);
 });
 
 ///////////// User Auth //////////////
@@ -32,4 +25,4 @@ const refreshToken = catchAsync(async (req, res) => {
   return res.success(data, "Token refreshed");
 });
 
-module.exports = { adminLogin, adminCreateStaff, customerRegister, customerLogin, refreshToken };
+module.exports = { adminLogin, customerRegister, customerLogin, refreshToken };

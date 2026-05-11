@@ -33,7 +33,7 @@ src/
 ├── routes/            # Endpoint definitions
 ├── middlewares/       # Auth, error, validation
 ├── validators/        # Zod schemas
-└── utils/             # AppError, helpers
+└── utils/             # helpers
 ```
 
 ## Request Lifecycle
@@ -94,6 +94,7 @@ routes/
 ## Service/Controller Per Resource Pattern
 
 Every resource follows the same pattern:
+
 1. **Service** (`src/services/*.service.js`) — Prisma queries, business logic
 2. **Controller** (`src/controllers/*.controller.js`) — catchAsync wrapper, request handling
 3. **Route** (`src/routes/*.route.js`) — Express router with middleware binding

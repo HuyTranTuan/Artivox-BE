@@ -58,7 +58,7 @@ enum DiscountType {
 }
 
 enum ChatMessageSender {
-  ADMIN
+  STAFF
   CUSTOMER
 }
 
@@ -76,7 +76,7 @@ model AdminUser {
   fullName  String    @db.VarChar(100)
   phone     String    @unique @db.VarChar(15)
   role      AdminRole @default(STAFF)
-  isActive  Boolean   @default(false)
+  permission String   @default("{create:false,update:false,del:false}")
   createdAt DateTime  @default(now()) @db.Timestamp
   updatedAt DateTime  @default(now()) @updatedAt @db.Timestamp
   deletedAt DateTime? @db.Timestamp
@@ -102,7 +102,7 @@ model Customer {
   dateOfBirth DateTime?
   gender      Gender?
   slug        String    @unique
-  isActive    Boolean   @default(true)
+  verifiedAt    DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
   deletedAt   DateTime?
@@ -314,7 +314,6 @@ model Article {
   slug        String    @unique
   authorId    BigInt
   coverImage  String?
-  isPublished Boolean   @default(false)
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt

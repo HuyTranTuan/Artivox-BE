@@ -1,6 +1,5 @@
 const customerService = require("@services/customer.service");
 const catchAsync = require("@utils/catchAsync");
-const AppError = require("@utils/AppError");
 
 // Fetch all customers
 const getCustomers = catchAsync(async (req, res) => {
@@ -10,9 +9,18 @@ const getCustomers = catchAsync(async (req, res) => {
 
 // Fetch a single customer by slug
 const getCustomerBySlug = catchAsync(async (req, res) => {
-  const data = await customerService.getCustomerBySlug(req.params.slug);
-  if (!data) throw new AppError("Customer not found", 404);
+  const { slug } = req.params;
+  const data = await customerService.getCustomerBySlug(slug);
+  if (!data) res.notFound();
   return res.success(data, "Customer detail fetched");
 });
 
-module.exports = { getCustomers, getCustomerBySlug };
+// Fetch a single customer by email
+const getCustomerByEmail = catchAsync(async (req, res) => {
+  const { email } = req.params;
+  const data = await customerService.getCustomerByEmail(email);
+  if (!data) res.notFound();
+  return res.success(data, "Customer detail fetched");
+});
+
+module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail };

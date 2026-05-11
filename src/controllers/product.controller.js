@@ -1,6 +1,5 @@
 const productService = require("@services/product.service");
 const catchAsync = require("@utils/catchAsync");
-const AppError = require("@utils/AppError");
 
 const getProducts = catchAsync(async (req, res) => {
   const data = await productService.getProducts(req.query);
@@ -9,7 +8,7 @@ const getProducts = catchAsync(async (req, res) => {
 
 const getProductBySlug = catchAsync(async (req, res) => {
   const data = await productService.getProductBySlug(req.params.slug);
-  if (!data) throw new AppError("Product not found", 404);
+  if (!data) return res.notFound();
   return res.success(data, "Product detail fetched");
 });
 

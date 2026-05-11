@@ -1,5 +1,4 @@
 const { prisma } = require("@libs/prisma");
-const AppError = require("@utils/AppError");
 
 // Get or create chat room
 async function getOrCreateRoom(adminId, customerId) {
@@ -40,7 +39,7 @@ async function getMessages(chatRoomId, userId) {
   const room = await prisma.chatRoom.findFirst({
     where: { id: BigInt(chatRoomId), OR: [{ adminId: BigInt(userId) }, { customerId: BigInt(userId) }] },
   });
-  if (!room) throw new AppError("Chat room not found", 404);
+  if (!room) return res.notFound();
 
   return prisma.chatMessage.findMany({
     where: { chatRoomId },
@@ -51,7 +50,7 @@ async function getMessages(chatRoomId, userId) {
 // Send message
 async function sendMessage(chatRoomId, { senderType, adminId, customerId, content }) {
   const room = await prisma.chatRoom.findUnique({ where: { id: BigInt(chatRoomId) } });
-  if (!room) throw new AppError("Chat room not found", 404);
+  if (!room) return res.notFound();
 
   const message = await prisma.chatMessage.create({
     data: { chatRoomId, senderType, adminId, customerId, content },

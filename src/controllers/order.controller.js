@@ -1,22 +1,27 @@
+const { HTTP_CODES } = require("@/config/constants");
 const orderService = require("@services/order.service");
 const catchAsync = require("@utils/catchAsync");
-const AppError = require("@utils/AppError");
 
 // Create order
 const createOrder = catchAsync(async (req, res) => {
-  const data = await orderService.createOrder(req.user.id, req.body);
-  return res.success(data, "Order created", 201);
+  const userID = req.user.id;
+  const body = req.body;
+  const data = await orderService.createOrder(userID, body);
+  return res.success(data, "Order created", HTTP_CODES.CREATED);
 });
 
 // Get my orders
 const getMyOrders = catchAsync(async (req, res) => {
-  const data = await orderService.getMyOrders(req.user.id);
+  const userID = req.user.id;
+  const data = await orderService.getMyOrders(userID);
   return res.success(data, "Orders fetched");
 });
 
 // Cancel order
 const cancelOrder = catchAsync(async (req, res) => {
-  const data = await orderService.cancelOrder(req.params.id, req.user.id);
+  const userID = req.user.id;
+  const { orderId } = req.params;
+  const data = await orderService.cancelOrder(orderId, userID);
   return res.success(data, "Order cancelled");
 });
 
@@ -28,8 +33,9 @@ const getAllOrders = catchAsync(async (req, res) => {
 
 // Fetch a single order by id (public)
 const getOrderById = catchAsync(async (req, res) => {
-  const data = await orderService.getOrderById(req.params.id);
-  if (!data) throw new AppError("Order not found", 404);
+  const { orderId } = req.params;
+  const data = await orderService.getOrderById(orderId);
+  if (!data) return res.notFound();
   return res.success(data, "Order detail fetched");
 });
 

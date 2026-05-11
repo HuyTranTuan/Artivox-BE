@@ -1,6 +1,6 @@
+const { HTTP_CODES } = require("@/config/constants");
 const { prisma } = require("@libs/prisma");
 const { v4: uuidv4 } = require("uuid");
-const AppError = require("@utils/AppError");
 
 // Create order from cart
 async function createOrder(customerId, { shippingAddress }) {
@@ -8,7 +8,7 @@ async function createOrder(customerId, { shippingAddress }) {
     where: { customerId },
     include: { product: true },
   });
-  if (!cartItems.length) throw new AppError("Cart is empty", 400);
+  if (!cartItems.length) return res.notFound();
 
   let totalAmount = 0;
   const orderItems = cartItems.map((item) => {
@@ -47,8 +47,8 @@ async function cancelOrder(id, customerId) {
   const order = await prisma.order.findFirst({
     where: { id: BigInt(id), customerId },
   });
-  if (!order) throw new AppError("Order not found", 404);
-  if (order.status !== "PENDING") throw new AppError("Only pending orders can be cancelled", 400);
+  if (!order) return res.notFound();
+  if (order.status !== "PENDING") return res.error("Only pending orders can be cancelled", HTTP_CODES.BAD_REQUESTED);
 
   return prisma.order.update({
     where: { id: BigInt(id) },

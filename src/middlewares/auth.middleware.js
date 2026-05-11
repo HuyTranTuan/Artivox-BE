@@ -6,9 +6,9 @@ const authService = require("@services/auth.service");
 // Verify JWT token
 const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader = req?.headers?.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.error(false, "No token provided", HTTP_CODES.UNAUTHORIZED);
+      return res.error("No token provided", HTTP_CODES.UNAUTHORIZED);
     }
 
     const token = authHeader.split(" ")[1];
@@ -18,13 +18,13 @@ const authMiddleware = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
-      return next(res.error(false, "Invalid token", HTTP_CODES.UNAUTHORIZED));
+      return next(res.error("Invalid token", HTTP_CODES.UNAUTHORIZED));
     }
     if (error.name === "TokenExpiredError") {
       // Try to refresh the token using refresh token from header
       const refreshToken = req.headers["x-refresh-token"];
       if (!refreshToken) {
-        return next(res.error(false, "Token expired", HTTP_CODES.UNAUTHORIZED));
+        return next(res.error("Token expired", HTTP_CODES.UNAUTHORIZED));
       }
 
       try {
@@ -34,7 +34,7 @@ const authMiddleware = async (req, res, next) => {
         req.newTokens = tokens;
         return next();
       } catch (refreshError) {
-        return next(res.error(false, "Session expired", HTTP_CODES.UNAUTHORIZED));
+        return next(res.error("Session expired", HTTP_CODES.UNAUTHORIZED));
       }
     }
     next(error);
@@ -45,7 +45,7 @@ const authMiddleware = async (req, res, next) => {
 const restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
-      return next(res.error(false, "Unauthorized access", HTTP_CODES.FORBIDDEN));
+      return next(res.error("Unauthorized access", HTTP_CODES.FORBIDDEN));
     }
     next();
   };
