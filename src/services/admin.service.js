@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const { prisma } = require("@libs/prisma");
 const { v7 } = require("uuid");
 const { HTTP_CODES } = require("@/config/constants");
+const AppError = require("@/utils/AppError");
 
 const saltRound = Number(process.env.BCRYPT_SALT) || 10;
 
@@ -91,7 +92,7 @@ async function getAdminRevenue() {
 // Update order status
 async function updateOrderStatus(id, status, assignedAdminId) {
   const order = await prisma.order.findUnique({ where: { id: BigInt(id) } });
-  if (!order) throw new Error("Not found", HTTP_CODES.NOT_FOUND);
+  if (!order) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
 
   return prisma.order.update({
     where: { id: BigInt(id) },
@@ -138,7 +139,7 @@ async function getCustomer(slug) {
       createdAt: true,
     },
   });
-  if (!customer) throw new Error("Not found", HTTP_CODES.NOT_FOUND);
+  if (!customer) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
   return customer;
 }
 
@@ -158,7 +159,7 @@ async function createStaff(email, password, fullName, phone) {
       OR: [{ email: email }, { phone: phone }],
     },
   });
-  if (existing) throw new Error("Email or Phone number already registered", HTTP_CODES.CONFLICT);
+  if (existing) throw new AppError("Email or Phone number already registered", HTTP_CODES.CONFLICT);
 
   const hashedPassword = await bcrypt.hash(password, saltRound);
   // const id = v7();
@@ -173,7 +174,7 @@ async function decentralizeStaff(email, create, update, del) {
   const customer = await prisma.adminUser.findFirst({
     where: { email, role: "STAFF", deletedAt: null },
   });
-  if (!customer) throw new Error("Not found", HTTP_CODES.NOT_FOUND);
+  if (!customer) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
   await prisma.adminUser.update({
     where: { email, deletedAt: null },
     data: {

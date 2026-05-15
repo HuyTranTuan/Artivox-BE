@@ -4,6 +4,7 @@ const { prisma } = require("@libs/prisma");
 const { jwtSecret, jwtRefreshSecret, accessTokenTTL, refreshTokenTTL } = require("@config/auth");
 const slugify = require("@/utils/slugify");
 const { HTTP_CODES } = require("@/config/constants");
+const AppError = require("@/utils/AppError");
 
 function generateTokens(payload) {
   const accessToken = jwt.sign(payload, jwtSecret, {
@@ -20,11 +21,11 @@ async function adminLogin(email, password) {
   const user = await prisma.adminUser.findFirst({
     where: { email, deletedAt: null },
   });
-  if (!user) throw new Error("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
-  if (user.deletedAt) throw new Error("Account deactivated", HTTP_CODES.FORBIDDEN);
+  if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
+  if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
 
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
+  if (!isMatch) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
 
   const tokens = generateTokens({
     id: user.id,
@@ -48,7 +49,7 @@ async function adminLogin(email, password) {
 // Customer register
 async function customerRegister({ email, password, fullName, phone, address }) {
   const existing = await prisma.customer.findFirst({ where: { email } });
-  if (existing) throw new Error("Email already registered", HTTP_CODES.CONFLICT);
+  if (existing) throw new AppError("Email already registered", HTTP_CODES.CONFLICT);
 
   const hashedPassword = await bcrypt.hash(password, 12);
   const slug = slugify(fullName || email.split("@")[0]) + "-" + Date.now().toString(36);
@@ -78,11 +79,11 @@ async function customerLogin(email, password) {
   const user = await prisma.customer.findFirst({
     where: { email, deletedAt: null },
   });
-  if (!user) throw new Error("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
-  if (user.deletedAt) throw new Error("Account deactivated", HTTP_CODES.FORBIDDEN);
+  if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
+  if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
 
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw new Error("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
+  if (!isMatch) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
 
   const tokens = generateTokens({
     id: user.id,
@@ -111,18 +112,18 @@ async function refreshToken(token) {
       const user = await prisma.adminUser.findFirst({
         where: { email: payload.email, deletedAt: null },
       });
-      if (!user) throw new Error("Not found", HTTP_CODES.NOT_FOUND);
+      if (!user) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
     } else {
       const user = await prisma.customer.findFirst({
         where: { email: payload.email, deletedAt: null },
       });
-      if (!user) throw new Error("Not found", HTTP_CODES.NOT_FOUND);
+      if (!user) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
     }
 
     return generateTokens(payload);
   } catch (error) {
-    if (error.isOperational) throw new Error("Failed", HTTP_CODES.INTERNAL_SERVER_ERROR);
-    throw new Error("Invalid refreshtoken", HTTP_CODES.UNAUTHORIZED);
+    if (error.isOperational) throw new AppError("Failed", HTTP_CODES.INTERNAL_SERVER_ERROR);
+    throw new AppError("Invalid refreshtoken", HTTP_CODES.UNAUTHORIZED);
   }
 }
 
