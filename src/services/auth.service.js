@@ -127,9 +127,101 @@ async function refreshToken(token) {
   }
 }
 
+// Logout function (works for both admin and customer)
+async function logout(userId, userType) {
+  // In a real app, you might invalidate tokens by storing them in a blacklist (Redis)
+  // For now, logout is handled client-side by removing tokens
+  return { message: "Logout successful" };
+}
+
+// Update admin account information
+async function updateAdminAccount(userId, { fullName, email, phone, address }) {
+  const user = await prisma.adminUser.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
+
+  if (!user) throw new AppError("User not found", HTTP_CODES.NOT_FOUND);
+
+  // Check if email is already taken by another user
+  if (email && email !== user.email) {
+    const existing = await prisma.adminUser.findFirst({
+      where: { email, deletedAt: null, NOT: { id: userId } },
+    });
+    if (existing) throw new AppError("Email already in use", HTTP_CODES.CONFLICT);
+  }
+
+  const updated = await prisma.adminUser.update({
+    where: { id: userId },
+    data: {
+      ...(fullName && { fullName }),
+      ...(email && { email }),
+      ...(phone && { phone }),
+      ...(address && { address }),
+    },
+  });
+
+  return {
+    id: updated.id,
+    email: updated.email,
+    fullName: updated.fullName,
+    role: updated.role,
+    phone: updated.phone,
+    address: updated.address,
+  };
+}
+
+// Update customer account information
+async function updateCustomerAccount(customerId, { fullName, email, phone, address, password }) {
+  const user = await prisma.customer.findFirst({
+    where: { id: customerId, deletedAt: null },
+  });
+
+  if (!user) throw new AppError("User not found", HTTP_CODES.NOT_FOUND);
+
+  // Check if email is already taken by another user
+  if (email && email !== user.email) {
+    const existing = await prisma.customer.findFirst({
+      where: { email, deletedAt: null, NOT: { id: customerId } },
+    });
+    if (existing) throw new AppError("Email already in use", HTTP_CODES.CONFLICT);
+  }
+
+  const slug = fullName ? slugify(fullName) + "-" + Date.now().toString(36) : user.slug;
+
+  const updateData = {
+    ...(fullName && { fullName }),
+    ...(email && { email }),
+    ...(phone && { phone }),
+    ...(address && { address }),
+    ...(fullName && { slug }),
+  };
+
+  // Hash new password if provided
+  if (password) {
+    updateData.password = await bcrypt.hash(password, 12);
+  }
+
+  const updated = await prisma.customer.update({
+    where: { id: customerId },
+    data: updateData,
+  });
+
+  return {
+    id: updated.id,
+    email: updated.email,
+    fullName: updated.fullName,
+    phone: updated.phone,
+    address: updated.address,
+    slug: updated.slug,
+  };
+}
+
 module.exports = {
   adminLogin,
   customerRegister,
   customerLogin,
   refreshToken,
+  logout,
+  updateAdminAccount,
+  updateCustomerAccount,
 };

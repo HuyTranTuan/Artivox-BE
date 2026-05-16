@@ -46,5 +46,6 @@ router.get("/:slug", articleController.getArticleBySlug);
 router.post("/", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.createArticle);
 router.put("/:slug", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.updateArticle);
 router.delete("/:slug", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.deleteArticle);
+router.patch("/:articleId/approve", authMiddleware, restrictTo("ADMIN", "MANAGER"), articleController.approveArticle);
 
 module.exports = router;

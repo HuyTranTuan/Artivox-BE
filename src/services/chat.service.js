@@ -1,4 +1,5 @@
 const { prisma } = require("@libs/prisma");
+const notificationService = require("@services/notification.service");
 
 // Get or create chat room
 async function getOrCreateRoom(adminId, customerId) {
@@ -47,16 +48,39 @@ async function getMessages(chatRoomId, userId) {
   });
 }
 
-// Send message
-async function sendMessage(chatRoomId, { senderType, adminId, customerId, content }) {
+// Send message with optional file/image
+async function sendMessage(chatRoomId, { senderType, adminId, customerId, content, fileUrl, fileType }) {
   const room = await prisma.chatRoom.findUnique({ where: { id: BigInt(chatRoomId) } });
   if (!room) return res.notFound();
 
   const message = await prisma.chatMessage.create({
-    data: { chatRoomId, senderType, adminId, customerId, content },
+    data: {
+      chatRoomId,
+      senderType,
+      adminId,
+      customerId,
+      content,
+      fileUrl: fileUrl || null,
+      fileType: fileType || null, // 'IMAGE' or 'FILE'
+    },
   });
 
-  await prisma.chatRoom.update({ where: { id: chatRoomId }, data: { updatedAt: new Date() } });
+  // Update chat room's updatedAt
+  await prisma.chatRoom.update({
+    where: { id: chatRoomId },
+    data: { updatedAt: new Date() },
+  });
+
+  // Send notification to the recipient
+  const recipientId = senderType === "ADMIN" ? room.customerId : room.adminId;
+  const senderName = senderType === "ADMIN" ? "Admin" : "Customer";
+
+  await notificationService.createNotification(recipientId, senderType === "ADMIN" ? "CUSTOMER" : "ADMIN", {
+    type: "CHAT_MESSAGE",
+    title: `New message from ${senderName}`,
+    message: fileUrl ? `${senderName} sent a ${fileType || "file"}` : content,
+    metadata: { chatRoomId, messageId: message.id, senderId: senderType === "ADMIN" ? adminId : customerId },
+  });
 
   return message;
 }

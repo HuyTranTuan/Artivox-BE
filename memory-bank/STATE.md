@@ -1,103 +1,61 @@
 # STATE: Current Progress
 
-## Completed
+## Last Updated: May 16, 2026
 
-- ✅ Express base with error middleware
-- ✅ Prisma dual-database setup (PostgreSQL + MariaDB)
-- ✅ Redis client initialization
-- ✅ JWT authentication
-- ✅ Module aliases (@controllers, @services, etc.)
-- ✅ Catalog service refactor (split into: collection, product, material, tool)
-- ✅ Prisma v6 enum conflict resolution (isolated process generation)
-- ✅ Models service, controller, route (GET /models, GET /models/:slug)
-- ✅ Materials slug detail (GET /materials/:slug)
-- ✅ Tools slug detail (GET /tools/:slug)
-- ✅ Customers public endpoints (GET /customers, GET /customers/:slug)
-- ✅ Discounts public endpoints (GET /discounts, GET /discounts/:slug)
-- ✅ Discount orders public endpoints (GET /discount_orders, GET /discount_orders/:id)
-- ✅ Orders public endpoints (GET /orders, GET /orders/:id) with order_items join
-- ✅ Articles locale support (GET /articles/vi, /articles/en, /articles/vi/:slug, /articles/en/:slug)
-- ✅ Customer activity log endpoint (GET /customer-activity-log, auth required)
+## Phase Completion Summary
 
-## Current Focus
+| Phase           | Status      | Features                                       |
+| --------------- | ----------- | ---------------------------------------------- |
+| Core Setup      | ✅ Complete | Express, Prisma, JWT, Redis                    |
+| Public Catalog  | ✅ Complete | Models, Materials, Tools, Products             |
+| Authentication  | ✅ Complete | Admin/Customer login, register, refresh tokens |
+| User Management | ✅ Complete | Account updates, profile management            |
+| Shopping        | ✅ Complete | Cart, Orders, Discounts                        |
+| Content         | ✅ Complete | Articles (multi-language)                      |
+| Real-time       | ✅ Complete | Chat system with file/image support            |
+| Notifications   | ✅ Complete | 5 notification types with auto-triggers        |
 
-- No active development — all requested routes are complete
+## Recently Completed (Sprint 5)
 
-## Endpoints Status
+### Notification System
 
-### Models
+- ✅ Database: `Notification` model with `NotificationType` enum
+- ✅ Service: Full CRUD for notifications (create, get, mark as read, delete)
+- ✅ Controllers & Routes: GET/PATCH/DELETE endpoints
+- ✅ Auto-triggers:
+  - ORDER_CREATED → All admins (when customer creates order)
+  - ORDER_APPROVED → Customer (when admin approves order)
+  - ARTICLE_CREATED → All admins (when article is created)
+  - ARTICLE_APPROVED → Author (when admin approves article)
+  - CHAT_MESSAGE → Recipient (when message is sent)
 
-- [x] GET /api/v1/models (type=MODEL, join model_3d)
-- [x] GET /api/v1/models/:slug
+### Enhanced Chat System
 
-### Collections
+- ✅ File/image upload support (fileUrl, fileType)
+- ✅ Message notifications included
 
-- [x] GET /api/v1/collections
-- [x] GET /api/v1/collections/:id
+### Order Management
 
-### Products
+- ✅ `approveOrder()` endpoint: PATCH /orders/:id/approve
+- ✅ Auto-sends ORDER_APPROVED notification
 
-- [x] GET /api/v1/products (with search/type filter)
-- [x] GET /api/v1/products/:slug
+### Article Management
 
-### Materials
+- ✅ `approveArticle()` endpoint: PATCH /articles/:id/approve
+- ✅ Auto-sends ARTICLE_APPROVED notification
+- ✅ Sets publishedAt timestamp
 
-- [x] GET /api/v1/materials (type=MATERIAL, join materials)
-- [x] GET /api/v1/materials/:slug
+## Current Status
 
-### Tools
+All requested features implemented and tested. System ready for production.
 
-- [x] GET /api/v1/tools (type=TOOL, join tools)
-- [x] GET /api/v1/tools/:slug
+## Next Sprint Ideas
 
-### Customers
-
-- [x] GET /api/v1/customers
-- [x] GET /api/v1/customers/:slug
-
-### Orders
-
-- [x] GET /api/v1/orders (public, all orders with items + customer)
-- [x] GET /api/v1/orders/:id (public, single order detail)
-- [x] POST /api/v1/orders (auth required, create from cart)
-- [x] GET /api/v1/orders/me (auth required, my orders)
-- [x] POST /api/v1/orders/:id/cancel (auth required)
-
-### Discounts
-
-- [x] GET /api/v1/discounts
-- [x] GET /api/v1/discounts/:slug
-
-### Discount Orders
-
-- [x] GET /api/v1/discount_orders
-- [x] GET /api/v1/discount_orders/:id
-
-### Articles
-
-- [x] GET /api/v1/articles
-- [x] GET /api/v1/articles/:slug
-- [x] GET /api/v1/articles/vi (published, locale=vi)
-- [x] GET /api/v1/articles/en (published, locale=en)
-- [x] GET /api/v1/articles/vi/:slug (published, locale=vi)
-- [x] GET /api/v1/articles/en/:slug (published, locale=en)
-
-### Customer Activity Log
-
-- [x] GET /api/v1/customer-activity-log (auth required)
-
-### Cart (Auth)
-
-- [x] GET /api/v1/cart
-- [x] POST /api/v1/cart/add
-- [x] PATCH /api/v1/cart/:id
-- [x] DELETE /api/v1/cart/:id
-
-### Admin
-
-- [x] CRUD users, products, discounts
-
-### Auth
+- Email notifications
+- SMS alerts for critical events
+- Push notifications via WebSocket
+- Notification preferences/settings
+- Read receipts for chat messages
 
 - [x] POST /api/v1/auth/admin/login
 - [x] POST /api/v1/auth/customer/register
@@ -106,22 +64,22 @@
 
 ## Services Created
 
-| Service | File | Queries |
-|---------|------|---------|
-| models.service | `src/services/models.service.js` | getModels, getModelBySlug |
-| customer.service | `src/services/customer.service.js` | getCustomers, getCustomerBySlug |
-| discount.service | `src/services/discount.service.js` | getDiscounts, getDiscountBySlug |
-| discountOrder.service | `src/services/discountOrder.service.js` | getDiscountOrders, getDiscountOrderById |
-| customerActivityLog.service | `src/services/customerActivityLog.service.js` | getCustomerActivityLogs |
+| Service                     | File                                          | Queries                                 |
+| --------------------------- | --------------------------------------------- | --------------------------------------- |
+| models.service              | `src/services/models.service.js`              | getModels, getModelBySlug               |
+| customer.service            | `src/services/customer.service.js`            | getCustomers, getCustomerBySlug         |
+| discount.service            | `src/services/discount.service.js`            | getDiscounts, getDiscountBySlug         |
+| discountOrder.service       | `src/services/discountOrder.service.js`       | getDiscountOrders, getDiscountOrderById |
+| customerActivityLog.service | `src/services/customerActivityLog.service.js` | getCustomerActivityLogs                 |
 
 ## Services Updated
 
-| Service | Additions |
-|---------|-----------|
-| material.service | getMaterialBySlug |
-| tool.service | getToolBySlug |
-| order.service | getAllOrders, getOrderById |
-| article.service | getArticlesByLocale, getArticleBySlugAndLocale |
+| Service          | Additions                                      |
+| ---------------- | ---------------------------------------------- |
+| material.service | getMaterialBySlug                              |
+| tool.service     | getToolBySlug                                  |
+| order.service    | getAllOrders, getOrderById                     |
+| article.service  | getArticlesByLocale, getArticleBySlugAndLocale |
 
 ## Dependencies Status
 

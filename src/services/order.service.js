@@ -1,6 +1,7 @@
 const { HTTP_CODES } = require("@/config/constants");
 const { prisma } = require("@libs/prisma");
 const { v4: uuidv4 } = require("uuid");
+const notificationService = require("@services/notification.service");
 
 // Create order from cart
 async function createOrder(customerId, { shippingAddress }) {
@@ -29,6 +30,21 @@ async function createOrder(customerId, { shippingAddress }) {
 
   // Clear cart
   await prisma.cartItem.deleteMany({ where: { customerId } });
+
+  // Send notification to admins about new order
+  const admins = await prisma.adminUser.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await notificationService.createNotification(admin.id, "ADMIN", {
+      type: "ORDER_CREATED",
+      title: "New Order Created",
+      message: `New order: ${order.orderNumber} - ₫${totalAmount.toLocaleString("en-US")}`,
+      metadata: { orderId: order.id, customerId },
+    });
+  }
 
   return order;
 }
@@ -83,4 +99,33 @@ async function getOrderById(id) {
   });
 }
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById };
+/**
+ * Approve order (change status to APPROVED)
+ */
+async function approveOrder(orderId) {
+  const order = await prisma.order.findFirst({
+    where: { id: BigInt(orderId), deletedAt: null },
+    include: { customer: { select: { id: true, fullName: true } } },
+  });
+
+  if (!order) return res.notFound();
+  if (order.status !== "PENDING") return res.error("Only pending orders can be approved", HTTP_CODES.BAD_REQUESTED);
+
+  const updated = await prisma.order.update({
+    where: { id: BigInt(orderId) },
+    data: { status: "COMPLETED" },
+    include: { items: { include: { product: true } } },
+  });
+
+  // Send notification to customer
+  await notificationService.createNotification(order.customer.id, "CUSTOMER", {
+    type: "ORDER_APPROVED",
+    title: "Order Approved",
+    message: `Your order ${order.orderNumber} has been approved and is being prepared`,
+    metadata: { orderId },
+  });
+
+  return updated;
+}
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder };

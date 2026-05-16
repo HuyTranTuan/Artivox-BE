@@ -3,7 +3,7 @@
 ## Overview
 
 E-commerce platform for 3D printing: models, materials, tools.
-Dual-database: PostgreSQL (primary), MariaDB (fallback).
+Dual-database: PostgreSQL (primary).
 
 ## Tech Stack
 
@@ -104,4 +104,4 @@ Every resource follows the same pattern:
 - **Prisma v6 Enum Conflict**: Dual schemas cause namespace collision
   - **Fix**: `scripts/prisma-generate.js` runs generation in isolated processes
   - **Usage**: `npm run prisma:generate` (never `npx prisma generate`)
-  - **Critical**: @prisma/client version must match prisma CLI version (both v6.19.3+)
+  - **Critical**: @prisma/client version must match prisma CLI version (both v7+)

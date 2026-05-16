@@ -39,4 +39,12 @@ const getOrderById = catchAsync(async (req, res) => {
   return res.success(data, "Order detail fetched");
 });
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById };
+// Approve order
+const approveOrder = catchAsync(async (req, res) => {
+  const { orderId } = req.params;
+  const data = await orderService.approveOrder(orderId);
+  if (!data) return res.notFound();
+  return res.success(data, "Order approved");
+});
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder };

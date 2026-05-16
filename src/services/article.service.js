@@ -1,4 +1,5 @@
 const { prisma } = require("@libs/prisma");
+const notificationService = require("@services/notification.service");
 
 function slugify(str) {
   return str
@@ -11,7 +12,7 @@ function slugify(str) {
 async function createArticle(authorId, { slug, coverImage, translations }) {
   const articleSlug = slug || slugify(translations?.[0]?.title || "article") + "-" + Date.now().toString(36);
 
-  return prisma.article.create({
+  const article = await prisma.article.create({
     data: {
       slug: articleSlug,
       authorId,
@@ -20,6 +21,24 @@ async function createArticle(authorId, { slug, coverImage, translations }) {
     },
     include: { translations: true },
   });
+
+  // Send notification to all admins about new article
+  const title = translations?.[0]?.title || "New Article";
+  const admins = await prisma.adminUser.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await notificationService.createNotification(admin.id, "ADMIN", {
+      type: "ARTICLE_CREATED",
+      title: "New Article Created",
+      message: `New article: "${title}"`,
+      metadata: { articleId: article.id, authorId },
+    });
+  }
+
+  return article;
 }
 
 // Get all articles
@@ -28,7 +47,7 @@ async function getArticles() {
     where: { deletedAt: null },
     include: {
       translations: true,
-      author: { select: { id: true, fullName: true, slug: true } },
+      author: { select: { id: true, fullName: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -40,7 +59,7 @@ async function getArticleBySlug(slug) {
     where: { slug, deletedAt: null },
     include: {
       translations: true,
-      author: { select: { id: true, fullName: true, slug: true } },
+      author: { select: { id: true, fullName: true } },
     },
   });
   if (!article) return res.notFound();
@@ -83,12 +102,39 @@ async function deleteArticle(slug, authorId) {
   });
 }
 
+// Approve article (publish it)
+async function approveArticle(articleId, adminId) {
+  const article = await prisma.article.findUnique({
+    where: { id: articleId },
+    include: { author: { select: { id: true, fullName: true } } },
+  });
+
+  if (!article) return res.notFound();
+
+  const updated = await prisma.article.update({
+    where: { id: articleId },
+    data: { publishedAt: new Date() },
+    include: { translations: true, author: { select: { id: true, fullName: true } } },
+  });
+
+  // Send notification to author
+  const title = updated.translations?.[0]?.title || "Your Article";
+  await notificationService.createNotification(article.author.id, "CUSTOMER", {
+    type: "ARTICLE_APPROVED",
+    title: "Article Approved",
+    message: `Your article "${title}" has been approved and published`,
+    metadata: { articleId },
+  });
+
+  return updated;
+}
+
 /**
  * Get articles by locale (only published articles).
  */
 async function getArticlesByLocale(locale) {
   return prisma.article.findMany({
-    where: { deletedAt: null, isPublished: true, translations: { some: { locale } } },
+    where: { deletedAt: null, publishedAt: true, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
       author: { select: { id: true, fullName: true, slug: true } },
@@ -102,7 +148,7 @@ async function getArticlesByLocale(locale) {
  */
 async function getArticleBySlugAndLocale(slug, locale) {
   const article = await prisma.article.findFirst({
-    where: { slug, deletedAt: null, isPublished: true, translations: { some: { locale } } },
+    where: { slug, deletedAt: null, publishedAt: true, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
       author: { select: { id: true, fullName: true, slug: true } },
@@ -112,4 +158,4 @@ async function getArticleBySlugAndLocale(slug, locale) {
   return article;
 }
 
-module.exports = { createArticle, getArticles, getArticleBySlug, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale };
+module.exports = { createArticle, getArticles, getArticleBySlug, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale, approveArticle };

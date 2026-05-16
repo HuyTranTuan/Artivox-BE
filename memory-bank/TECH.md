@@ -1,151 +1,145 @@
-# TECH: Technical Setup & Development Guide
+# TECH: Technology Stack & Setup
+
+## Stack Overview
+
+| Layer      | Technology   | Version |
+| ---------- | ------------ | ------- |
+| Runtime    | Node.js      | 20+     |
+| Framework  | Express.js   | 4.x     |
+| Database   | PostgreSQL   | 14+     |
+| ORM        | Prisma       | 7.x     |
+| Cache      | Redis        | 6+      |
+| Auth       | JWT + Bcrypt | -       |
+| Validation | Zod          | 3.x     |
+| Real-time  | Socket.io    | 4.x     |
 
 ## Environment Setup
 
-### Prerequisites
+### Required
 
 - Node v20+
-- npm v11+
-- PostgreSQL 14+ (local or remote)
-- MariaDB 10.5+ (local or remote)
-- Redis 6+ (local or remote)
+- PostgreSQL 14+
+- Redis 6+
 
-### Installation
-
-```bash
-cd Artivox-BE
-npm install
-cp .env.example .env
-```
-
-### .env File
+### .env Configuration
 
 ```env
-# Database URLs (both required)
 DATABASE_URL_POSTGRES=postgresql://user:pass@localhost:5432/artivox
-DATABASE_URL_MARIADB=mysql://user:pass@localhost:3306/artivox
-
-# JWT Secret
-JWT_SECRET=your_secret_key_here
-
-# Redis
+JWT_SECRET=your_secret_key
 REDIS_URL=redis://localhost:6379
-
-# Server
 PORT=3000
-HOST=localhost
 NODE_ENV=development
 ```
-
-## Development Commands
-
-```bash
-# Start dev server (nodemon watch mode)
-npm run dev
-
-# Generate Prisma clients (both schemas)
-npm run prisma:generate
-
-# Create/apply migrations (PostgreSQL)
-npm run prisma:migrate
-
-# Open Prisma Studio (database UI)
-npm run prisma:studio
-
-# Start production server
-npm start
-```
-
-## Prisma Setup (Critical)
-
-### Schema Generation Problem
-
-Both schema.postgres.prisma and schema.mariadb.prisma define identical enums.
-Running `npx prisma generate` loads both simultaneously → enum conflicts.
-
-### Solution
-
-`scripts/prisma-generate.js` runs each schema in isolated child processes.
-
-**First Time Setup:**
-
-```bash
-npm run prisma:generate
-# Generates: generated/postgres/ + generated/mariadb/
-```
-
-**Import Pattern:**
-
-```javascript
-const { prisma } = require("@libs/prisma");
-```
-
-### Both Database URLs Required
-
-```env
-DATABASE_URL_POSTGRES=...  # Required for schema.postgres.prisma
-DATABASE_URL_MARIADB=...   # Required for schema.mariadb.prisma
-```
-
-Without both, generation fails.
 
 ## Project Structure
 
 ```
-Artivox-BE/
-├── src/
-│   ├── controllers/
-│   │   ├── collection.controller.js
-│   │   ├── product.controller.js
-│   │   ├── material.controller.js
-│   │   ├── tool.controller.js
-│   │   └── ...
-│   ├── services/
-│   │   ├── collection.service.js
-│   │   ├── product.service.js
-│   │   ├── material.service.js
-│   │   ├── tool.service.js
-│   │   └── auth.service.js
-│   ├── routes/
-│   │   ├── collection.route.js
-│   │   ├── product.route.js
-│   │   ├── material.route.js
-│   │   ├── tool.route.js
-│   │   ├── index.js
-│   │   └── ...
-│   ├── validators/
-│   │   ├── collection.validator.js
-│   │   ├── product.validator.js
-│   │   └── ...
-│   ├── middlewares/
-│   │   ├── auth.middleware.js
-│   │   ├── error.middleware.js
-│   │   ├── validate.middleware.js
-│   │   └── response.middleware.js
-│   ├── config/
-│   │   ├── app.js
-│   │   ├── auth.js
-│   │   └── constants.js
-│   ├── libs/
-│   │   ├── prisma.js
-│   │   └── redis.js
-│   └── utils/
-│       ├── AppError.js
-│       └── catchAsync.js
-├── prisma/
-│   ├── schema.postgres.prisma
-│   ├── schema.mariadb.prisma
-│   └── migrations/
-├── scripts/
-│   └── prisma-generate.js
-├── memory-bank/
-│   ├── ARCH.md
-│   ├── STATE.md
-│   ├── RULES.md
-│   └── TECH.md
-├── server.js
-├── package.json
-└── .env
+src/
+├── config/          # Constants, CORS, auth config
+├── controllers/     # Thin request handlers
+├── services/        # Business logic (core)
+├── routes/          # Express routes
+├── middlewares/     # Auth, validation, error
+├── validators/      # Zod schemas
+└── utils/           # Helpers
+```
+
+## Key Commands
+
+```bash
+npm run dev              # Start with nodemon
+npm run prisma:generate # Generate Prisma client
+npm run prisma:migrate  # Run migrations
+npm start              # Production server
+```
+
+## Database Patterns
+
+- **Soft Delete:** deletedAt !== null
+- **Timestamps:** createdAt, updatedAt auto-managed
+- **Polymorphic:** Product type = MODEL|MATERIAL|TOOL
+- **Multi-lang:** ArticleTranslation with locale
+
+## Request Lifecycle
+
+```
+Route → Auth Middleware → Validation → Controller → Service → Prisma → Response
+```
+
+## Error Handling
+
+All errors flow through error.middleware.js with consistent format:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Error description"
+}
+```
+
+## Notification System
+
+- 5 auto-trigger types (ORDER_CREATED, ORDER_APPROVED, ARTICLE_CREATED, ARTICLE_APPROVED, CHAT_MESSAGE)
+- Stored in `notifications` table
+- API endpoints: GET, PATCH, DELETE
+- Metadata includes related resource IDs
+
+## Chat System
+
+- File/image support (fileUrl, fileType)
+- Chat rooms between admin + customer
+- Message notifications auto-sent
+- isRead tracking
+  │ │ ├── tool.controller.js
+  │ │ └── ...
+  │ ├── services/
+  │ │ ├── collection.service.js
+  │ │ ├── product.service.js
+  │ │ ├── material.service.js
+  │ │ ├── tool.service.js
+  │ │ └── auth.service.js
+  │ ├── routes/
+  │ │ ├── collection.route.js
+  │ │ ├── product.route.js
+  │ │ ├── material.route.js
+  │ │ ├── tool.route.js
+  │ │ ├── index.js
+  │ │ └── ...
+  │ ├── validators/
+  │ │ ├── collection.validator.js
+  │ │ ├── product.validator.js
+  │ │ └── ...
+  │ ├── middlewares/
+  │ │ ├── auth.middleware.js
+  │ │ ├── error.middleware.js
+  │ │ ├── validate.middleware.js
+  │ │ └── response.middleware.js
+  │ ├── config/
+  │ │ ├── app.js
+  │ │ ├── auth.js
+  │ │ └── constants.js
+  │ ├── libs/
+  │ │ ├── prisma.js
+  │ │ └── redis.js
+  │ └── utils/
+  │ ├── AppError.js
+  │ └── catchAsync.js
+  ├── prisma/
+  │ ├── schema.postgres.prisma
+  │ ├── schema.mariadb.prisma
+  │ └── migrations/
+  ├── scripts/
+  │ └── prisma-generate.js
+  ├── memory-bank/
+  │ ├── ARCH.md
+  │ ├── STATE.md
+  │ ├── RULES.md
+  │ └── TECH.md
+  ├── server.js
+  ├── package.json
+  └── .env
+
 ```
 
 ## API Structure
@@ -153,59 +147,75 @@ Artivox-BE/
 ### Base URL
 
 ```
+
 http://localhost:3000/api/v1
+
 ```
 
 ### Collections
 
 ```
-GET    /collections           # All collections
-GET    /collections/:id       # Collection detail
+
+GET /collections # All collections
+GET /collections/:id # Collection detail
+
 ```
 
 ### Products
 
 ```
-GET    /products              # All products (with filters)
-GET    /products/:id          # Product detail
+
+GET /products # All products (with filters)
+GET /products/:id # Product detail
+
 ```
 
 ### Materials
 
 ```
-GET    /materials             # All material products
+
+GET /materials # All material products
+
 ```
 
 ### Tools
 
 ```
-GET    /tools                 # All tool products
+
+GET /tools # All tool products
+
 ```
 
 ### Authentication
 
 ```
-POST   /auth/admin/login      # Admin login
-POST   /auth/customer/register # Customer register
-POST   /auth/customer/login    # Customer login
+
+POST /auth/admin/login # Admin login
+POST /auth/customer/register # Customer register
+POST /auth/customer/login # Customer login
+
 ```
 
 ### Cart (Auth Required)
 
 ```
-GET    /cart                  # Get customer's cart
-POST   /cart/add              # Add to cart
-PATCH  /cart/:id              # Update cart item
-DELETE /cart/:id              # Remove from cart
+
+GET /cart # Get customer's cart
+POST /cart/add # Add to cart
+PATCH /cart/:id # Update cart item
+DELETE /cart/:id # Remove from cart
+
 ```
 
 ### Orders (Auth Required)
 
 ```
-POST   /orders                # Create order
-GET    /orders/me             # Get my orders
-POST   /orders/:id/cancel     # Cancel order
-```
+
+POST /orders # Create order
+GET /orders/me # Get my orders
+POST /orders/:id/cancel # Cancel order
+
+````
 
 ## Code Patterns
 
@@ -226,7 +236,7 @@ async function getCollections() {
 }
 
 module.exports = { getCollections };
-```
+````
 
 ### Controller Function
 

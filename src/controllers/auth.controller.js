@@ -25,4 +25,30 @@ const refreshToken = catchAsync(async (req, res) => {
   return res.success(data, "Token refreshed");
 });
 
-module.exports = { adminLogin, customerRegister, customerLogin, refreshToken };
+// Logout - works for both admin and customer
+const logout = catchAsync(async (req, res) => {
+  const data = await authService.logout(req.user.id, req.user.type);
+  return res.success(data, "Logged out successfully");
+});
+
+// Update admin account
+const updateAdminAccount = catchAsync(async (req, res) => {
+  const data = await authService.updateAdminAccount(req.user.id, req.body);
+  return res.success(data, "Account updated successfully");
+});
+
+// Update customer account
+const updateCustomerAccount = catchAsync(async (req, res) => {
+  const data = await authService.updateCustomerAccount(req.user.id, req.body);
+  return res.success(data, "Account updated successfully");
+});
+
+module.exports = {
+  adminLogin,
+  customerRegister,
+  customerLogin,
+  refreshToken,
+  logout,
+  updateAdminAccount,
+  updateCustomerAccount,
+};

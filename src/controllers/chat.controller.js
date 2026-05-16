@@ -2,9 +2,7 @@ const chatService = require("@services/chat.service");
 const catchAsync = require("@utils/catchAsync");
 
 const getMyRooms = catchAsync(async (req, res) => {
-  const data = req.user.type === "admin"
-    ? await chatService.getAdminRooms(req.user.id)
-    : await chatService.getCustomerRooms(req.user.id);
+  const data = req.user.type === "admin" ? await chatService.getAdminRooms(req.user.id) : await chatService.getCustomerRooms(req.user.id);
   return res.success(data, "Chat rooms fetched");
 });
 
@@ -21,11 +19,15 @@ const getMessages = catchAsync(async (req, res) => {
 
 const sendMessage = catchAsync(async (req, res) => {
   const isAdmin = req.user.type === "admin";
+  const { content, fileUrl, fileType } = req.body;
+
   const data = await chatService.sendMessage(parseInt(req.params.roomId), {
     senderType: isAdmin ? "ADMIN" : "CUSTOMER",
     adminId: isAdmin ? req.user.id : null,
     customerId: isAdmin ? null : req.user.id,
-    content: req.body.content,
+    content,
+    fileUrl,
+    fileType,
   });
   return res.success(data, "Message sent", 201);
 });

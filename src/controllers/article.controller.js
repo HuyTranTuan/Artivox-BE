@@ -38,4 +38,12 @@ const getArticleBySlugAndLocale = catchAsync(async (req, res) => {
   return res.success(data, "Article fetched");
 });
 
-module.exports = { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale };
+// Approve article (admin only)
+const approveArticle = catchAsync(async (req, res) => {
+  const { articleId } = req.params;
+  const data = await articleService.approveArticle(BigInt(articleId), req.user.id);
+  if (!data) return res.notFound();
+  return res.success(data, "Article approved");
+});
+
+module.exports = { getArticles, getArticleBySlug, createArticle, updateArticle, deleteArticle, getArticlesByLocale, getArticleBySlugAndLocale, approveArticle };

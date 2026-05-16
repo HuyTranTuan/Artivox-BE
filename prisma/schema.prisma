@@ -62,6 +62,14 @@ enum ChatMessageSender {
   CUSTOMER
 }
 
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_APPROVED
+  ARTICLE_CREATED
+  ARTICLE_APPROVED
+  CHAT_MESSAGE
+}
+
 enum Gender {
   M
   F
@@ -370,6 +378,8 @@ model ChatMessage {
   adminId    BigInt?
   customerId BigInt?
   content    String
+  fileUrl    String?           // URL to uploaded file or image
+  fileType   String?           // 'IMAGE' or 'FILE'
   isRead     Boolean           @default(false)
   createdAt  DateTime          @default(now())
 
@@ -396,4 +406,26 @@ model CustomerActivityLog {
   @@index([customerId])
   @@index([createdAt])
   @@map("customer_activity_logs")
+}
+
+// ─── Notifications ───────────────────────────────────
+
+model Notification {
+  id          BigInt           @id @default(autoincrement())
+  type        NotificationType
+  recipientId BigInt           // adminId or customerId
+  recipientType String         // "ADMIN" or "CUSTOMER"
+  title       String
+  message     String
+  metadata    Json?            // Store related IDs (orderId, articleId, etc.)
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+
+  @@index([recipientId])
+  @@index([recipientType])
+  @@index([createdAt])
+  @@index([isRead])
+  @@map("notifications")
 }
