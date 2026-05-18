@@ -47,7 +47,7 @@ async function adminLogin(email, password) {
 }
 
 // Customer register
-async function customerRegister({ email, password, fullName, phone, address }) {
+async function customerRegister({ email, password, fullName, phone, address, gender }) {
   const existing = await prisma.customer.findFirst({ where: { email } });
   if (existing) throw new AppError("Email already registered", HTTP_CODES.CONFLICT);
 
@@ -55,7 +55,7 @@ async function customerRegister({ email, password, fullName, phone, address }) {
   const slug = slugify(fullName || email.split("@")[0]) + "-" + Date.now().toString(36);
 
   const user = await prisma.customer.create({
-    data: { email, password: hashedPassword, fullName, phone, address, slug },
+    data: { email, password: hashedPassword, fullName, phone, address, gender, slug },
   });
 
   const tokens = generateTokens({
@@ -69,6 +69,9 @@ async function customerRegister({ email, password, fullName, phone, address }) {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
       slug: user.slug,
     },
   };

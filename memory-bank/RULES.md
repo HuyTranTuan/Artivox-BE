@@ -1,60 +1,154 @@
-# RULES: Artivox Backend Conventions
+# RULES: Code Standards
 
-## Code Style
+**Updated:** May 17, 2026
 
-- **CommonJS Only**: require/module.exports (NO import/export)
-- **async/await**: Always. No .then() chains, no callbacks
-- **Try-Catch**: Mandatory in every API endpoint
-- **Comments**: Function purpose only - "// {purpose}" format
-- **Naming**: camelCase for functions/variables, PascalCase for classes
+## JavaScript Style
+
+- `async/await` only (no .then, no callbacks)
+- `try-catch` in all endpoints
+- `camelCase` variables, `PascalCase` classes
+- Clean comments, just purpose: `// Get all products`
+- Named exports only
 
 ## Architecture
 
-- **MVC Pattern**: Controllers orchestrate, Services execute, Models query
-- **Middleware First**: Register all middleware before routes
-- **Error Handling**: Throw Error, let error middleware catch
-- **Validation**: Use Zod schemas in validators/, validate in middleware
+- **Service → Controller → Route** pattern
+- **Service:** All business logic + database
+- **Controller:** Thin handler, validate + call service + return
+- **Route:** Just mount endpoints
 
 ## Database
 
-- **Prisma Only**: No raw SQL. Use prisma (connect to postgres)
-- **Soft Delete**: Query with `{ deletedAt: null }` by default
-- **Relations**: Use include/select for eager loading
-- **Migrations**: Update schemas (postgres)
+- **Prisma only** - No raw SQL
+- **Soft delete:** Always query with `deletedAt: null`
+- **Relations:** Use include/select for eager load
+- **Migrations:** `npx prisma migrate dev --name "desc"`
 
-## Generate Prisma
+## Services
 
-```bash
-npm run prisma:generate      # ✓ Correct (isolated process)
-npm run prisma:migrate       # Create migrations
-npm run prisma:studio        # Database UI
+```javascript
+// One service per domain
+// Each function = one workflow
+// Handle errors inside
+
+const createOrder = async (customerId, items) => {
+  // Business logic
+  // Database ops
+  // Notifications
+};
+
+const approveOrder = async (orderId) => {
+  // Update status
+  // Send notification
+  // Return order
+};
 ```
 
-❌ Never: `npx prisma generate` (enum conflict)
+## Controllers
 
-## Service Pattern
+```javascript
+// Thin layer - just call service
+// Validation in middleware
 
-- One service file per domain (collection.service.js, product.service.js, etc.)
-- Direct service imports in controllers (NO aggregator)
-- Each function = one query/workflow
-- Error handling in services, not controllers
+const createOrder = async (req, res) => {
+  try {
+    const order = await orderService.createOrder(req.user.id, req.body.items);
+    res.status(201).json(order);
+  } catch (error) {
+    throw error;
+  }
+};
+```
 
-## Controller Pattern
+## Routes
 
-- Import specific services (not catalog.service)
-- Validate parameters in middleware (not controller)
-- Thin layer: just call service + format response
-- Always use res.success(data) or throw Error
+```javascript
+// Register in routes/index.js
+// Use middleware for auth + validation
 
-## Route Pattern
+router.post("/orders", authenticateToken, validateSchema(orderSchema), orderController.createOrder);
+```
 
-- Mount at /api/v1 in index.js
-- Validate with middleware (validateMiddleware, schema)
-- Call controller
-- Return via response middleware
+## Validation
+
+- Use Zod schemas in `/validators`
+- Validate in middleware, not controller
+- Error messages clear and brief
+
+## Error Handling
+
+- Throw Error in service
+- Catch in controller
+- Middleware formats response
+- Never expose sensitive data
+
+## Database Commands
+
+```bash
+npm run dev                          # Start
+npx prisma migrate dev --name "x"    # New migration
+npx prisma migrate deploy            # Apply
+npx prisma studio                    # GUI
+node -c <file>                       # Check syntax
+```
+
+## API Response Format
+
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Success"
+}
+```
+
+Or error:
+
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "statusCode": 400
+}
+```
+
+## Authentication
+
+- JWT in `Authorization: Bearer <token>` header
+- Access: 1h, Refresh: 7d
+- Bcryptjs for passwords (saltRounds: 10)
+- Verify token in middleware
+
+## Testing Checklist
+
+- [ ] Syntax: `node -c src/services/x.js`
+- [ ] Database: Can connect
+- [ ] AI keys: Set in .env
+- [ ] CORS: Configured
+- [ ] JWT secrets: 32+ chars
+- [ ] All endpoints: Work
+- [ ] Error cases: Handled
 
 ## Git Commits
 
-- Small, focused changes
-- "feat: description", "fix: description"
-- Update memory-bank STATE.md after each feature
+- Focused, single feature per commit
+- Format: `feat: add X` or `fix: Y`
+- Update memory-bank/STATE.md after feature
+
+## When Stuck
+
+1. Check ARCH.md (design)
+2. Check TECH.md (setup)
+3. Check similar service (pattern reference)
+4. Check TESTING_GUIDE.md (endpoint examples)
+5. Check error logs
+
+## Quick Reference
+
+| Task          | Command                                |
+| ------------- | -------------------------------------- |
+| Start dev     | `npm run dev`                          |
+| New migration | `npx prisma migrate dev --name "desc"` |
+| Check syntax  | `node -c src/services/x.js`            |
+| View DB       | `npx prisma studio`                    |
+| Test endpoint | Use curl or Postman                    |

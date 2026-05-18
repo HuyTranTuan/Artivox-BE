@@ -1,4 +1,5 @@
 const chatService = require("@services/chat.service");
+const aiService = require("@services/ai.service");
 const catchAsync = require("@utils/catchAsync");
 
 const getMyRooms = catchAsync(async (req, res) => {
@@ -29,6 +30,25 @@ const sendMessage = catchAsync(async (req, res) => {
     fileUrl,
     fileType,
   });
+
+  // If customer sends text message (no file), auto-generate AI response
+  if (!isAdmin && !fileUrl) {
+    try {
+      const messages = await chatService.getMessages(parseInt(req.params.roomId), req.user.id);
+      const context = aiService.buildConversationContext(messages);
+      const aiResponse = await aiService.generateAIResponse(content, context);
+
+      await chatService.sendMessage(parseInt(req.params.roomId), {
+        senderType: "ADMIN",
+        adminId: 1, // System AI
+        customerId: null,
+        content: aiResponse,
+      });
+    } catch (error) {
+      console.error("Error generating AI response:", error.message);
+    }
+  }
+
   return res.success(data, "Message sent", 201);
 });
 

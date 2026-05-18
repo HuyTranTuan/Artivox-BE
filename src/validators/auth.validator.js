@@ -11,6 +11,7 @@ const registerSchema = z.object({
   fullName: z.string().min(1).max(255).optional(),
   phone: z.string().max(20).optional(),
   address: z.string().max(500).optional(),
+  gender: z.enum(["M", "F"]).optional(),
 });
 
 module.exports = { loginSchema, registerSchema };
