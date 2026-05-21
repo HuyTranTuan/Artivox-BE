@@ -58,6 +58,11 @@ const decentralizeStaff = catchAsync(async (req, res) => {
   return res.success(data, "Updated Successed!", HTTP_CODES.OK);
 });
 
+const getStaffDashboard = catchAsync(async (req, res) => {
+  const data = await adminService.getStaffDashboard(req.user.id);
+  return res.success(data, "Staff dashboard fetched!", HTTP_CODES.OK);
+});
+
 module.exports = {
   getAdminDashboard,
   getAdminUsers,
@@ -69,4 +74,5 @@ module.exports = {
   updateOrderStatus,
   createStaff,
   decentralizeStaff,
+  getStaffDashboard,
 };

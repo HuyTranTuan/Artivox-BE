@@ -73,7 +73,7 @@ async function getAdminRevenue() {
       slug: true,
       role: true,
       orders: {
-        where: { status: { in: ["PAID"] }, deletedAt: null },
+        where: { paymentStatus: { in: ["PAID"] }, deletedAt: null },
         select: { totalAmount: true },
       },
     },
@@ -372,6 +372,137 @@ async function getTimeSeries30Days() {
   return Object.values(chartDataMap);
 }
 
+// Get Staff Dashboard (personal stats for individual staff member)
+async function getStaffDashboard(staffId) {
+  const staffIdBig = BigInt(staffId);
+
+  // Fetch staff member info
+  const staff = await prisma.adminUser.findFirst({
+    where: { id: staffIdBig, deletedAt: null },
+    select: { id: true, email: true, fullName: true, phone: true, role: true, createdAt: true },
+  });
+
+  if (!staff) throw new AppError("Staff not found", HTTP_CODES.NOT_FOUND);
+
+  // Fetch personal stats in parallel
+  const [personalOrders, revenueData, chatRoomCount, recentOrders, topCustomers] = await Promise.all([
+    // Total orders handled
+    prisma.order.count({
+      where: { assignedAdminId: staffIdBig, deletedAt: null },
+    }),
+
+    // Total revenue from approved orders
+    prisma.order.aggregate({
+      where: {
+        assignedAdminId: staffIdBig,
+        paymentStatus: { in: ["PAID"] },
+        deletedAt: null,
+      },
+      _sum: { totalAmount: true },
+    }),
+
+    // Chat rooms count
+    prisma.chatRoom.count({
+      where: { adminId: staffIdBig },
+    }),
+
+    // Recent orders (last 5)
+    prisma.order.findMany({
+      where: { assignedAdminId: staffIdBig, deletedAt: null },
+      include: {
+        customer: { select: { id: true, fullName: true, email: true } },
+        items: { select: { quantity: true, product: { select: { name: true, basePrice: true } } } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+
+    // Top customers (by order count)
+    prisma.order.groupBy({
+      by: ["customerId"],
+      where: { assignedAdminId: staffIdBig, deletedAt: null },
+      _count: { id: true },
+      _sum: { totalAmount: true },
+      orderBy: [{ _count: { id: "desc" } }],
+      take: 5,
+    }),
+  ]);
+
+  // Fetch customer details for top customers
+  const topCustomerIds = topCustomers.map((tc) => tc.customerId);
+  const topCustomersDetails = await prisma.customer.findMany({
+    where: { id: { in: topCustomerIds } },
+    select: { id: true, fullName: true, email: true },
+  });
+
+  const topCustomersMap = Object.fromEntries(topCustomersDetails.map((c) => [c.id, c]));
+
+  // Count pending approvals (orders still in PENDING status)
+  const pendingApprovals = await prisma.order.count({
+    where: {
+      assignedAdminId: staffIdBig,
+      status: "PENDING",
+      paymentStatus: { notIn: ["PAID"] },
+      deletedAt: null,
+    },
+  });
+
+  // Approved orders count
+  const approvedOrders = await prisma.order.count({
+    where: {
+      assignedAdminId: staffIdBig,
+      paymentStatus: { in: ["PAID"] },
+      deletedAt: null,
+    },
+  });
+
+  // Order status distribution
+  const ordersByStatus = await prisma.order.groupBy({
+    by: ["status"],
+    where: { assignedAdminId: staffIdBig, deletedAt: null },
+    _count: { id: true },
+  });
+
+  const statusDistribution = Object.fromEntries(ordersByStatus.map((item) => [item.status, item._count.id]));
+
+  return {
+    profile: {
+      ...staff,
+      approvalRate: personalOrders > 0 ? Math.round((approvedOrders / personalOrders) * 100) : 0,
+    },
+    widgets: {
+      myOrders: personalOrders,
+      myRevenue: revenueData._sum.totalAmount || 0,
+      myApprovedOrders: approvedOrders,
+      myPendingApprovals: pendingApprovals,
+      myChatRooms: chatRoomCount,
+    },
+    tables: {
+      myRecentOrders: recentOrders.map((order) => ({
+        id: order.id,
+        customerId: order.customerId,
+        customerName: order.customer.fullName,
+        customerEmail: order.customer.email,
+        totalAmount: order.totalAmount,
+        itemCount: order.items.length,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+      })),
+      myTopCustomers: topCustomers.map((tc) => ({
+        customerId: tc.customerId,
+        customerName: topCustomersMap[tc.customerId]?.fullName || "Unknown",
+        customerEmail: topCustomersMap[tc.customerId]?.email || "",
+        orderCount: tc._count.id,
+        totalSpent: tc._sum.totalAmount || 0,
+      })),
+    },
+    charts: {
+      myOrderStatus: statusDistribution,
+    },
+  };
+}
+
 module.exports = {
   getAdminDashboard,
   getAdminUsers,
@@ -383,4 +514,5 @@ module.exports = {
   getCustomerBanned,
   createStaff,
   decentralizeStaff,
+  getStaffDashboard,
 };

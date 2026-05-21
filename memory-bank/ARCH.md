@@ -192,6 +192,22 @@ Thin layer: validate request, call service, return standardized response
 | ------ | ---------------------- | ---- | ----------------- |
 | GET    | /customer-activity-log | ✅   | Get activity logs |
 
+### Admin - Dashboard (1 endpoint)
+
+| Method | Endpoint               | Auth     | Purpose                     |
+| ------ | ---------------------- | -------- | --------------------------- |
+| GET    | /admin/dashboard       | ✅ ADMIN | Admin dashboard (all stats) |
+| GET    | /admin/staff/dashboard | ✅       | Staff personal dashboard    |
+
+### Search (4 endpoints) - 🆕 PENDING
+
+| Method | Endpoint          | Auth | Purpose                                 |
+| ------ | ----------------- | ---- | --------------------------------------- |
+| GET    | /search           | ❌   | Global search (all types + collections) |
+| GET    | /search/models    | ❌   | Search models (advanced filters)        |
+| GET    | /search/materials | ❌   | Search materials (type/unit filters)    |
+| GET    | /search/tools     | ❌   | Search tools (specs search)             |
+
 ### Base URL
 
 ```
@@ -318,8 +334,37 @@ Every resource follows the same pattern:
 
 - **Prisma v6 Enum Conflict**: Dual schemas cause namespace collision
   - **Fix**: `scripts/prisma-generate.js` runs generation in isolated processes
-  - **Usage**: `npm run prisma:generate` (never `npx prisma generate`)
-  - **Critical**: @prisma/client version must match prisma CLI version (both v7+)
+
+---
+
+## 🆕 Pending Implementation (May 20, 2026)
+
+### Staff Dashboard
+
+- **Endpoint:** `GET /admin/staff/dashboard` (authenticated)
+- **Location:** Add to `admin.service.js` + `admin.controller.js`
+- **Returns:** Personal stats (orders handled, revenue, chat rooms, pending approvals)
+- **Queries:** Filter by staffId - recent orders, top customers, order status distribution
+
+### Search APIs (4 variants)
+
+1. **Global:** `GET /search?q=...` - All products + collections
+2. **Models:** `GET /search/models?q=...&collectionId&priceMin&sort` - Advanced
+3. **Materials:** `GET /search/materials?q=...&type=FDM&unit=GRAM` - Type/unit filters
+4. **Tools:** `GET /search/tools?q=...&priceMin&priceMax` - Specs search
+
+- **Location:** Create `src/services/search.service.js`, `src/controllers/search.controller.js`, `src/routes/search.route.js`
+
+### Schema Issues Found
+
+1. 🔴 Missing `Order.assignedAdminId` - breaks admin dashboard
+2. 🟡 Wrong order status queries - should check `paymentStatus` not `status`
+3. 🟡 Notification design flaw - should use typed relations
+4. 🟡 Missing email verification tokens
+5. 🟠 No Cart model - performance impact
+
+- **Usage**: `npm run prisma:generate` (never `npx prisma generate`)
+- **Critical**: @prisma/client version must match prisma CLI version (both v7+)
 
 - **AI API Key Resolution**: Multiple env var names supported
   - Primary: AI_API_KEY, GROQ_API_KEY, OPENAI_API_KEY

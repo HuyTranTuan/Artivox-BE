@@ -92,6 +92,7 @@ model AdminUser {
   articles     Article[]
   chatRooms    ChatRoom[]
   chatMessages ChatMessage[]
+  orders       Order[]
 
   @@index([email])
   @@index([createdAt])
@@ -224,6 +225,7 @@ model Tool {
 model Order {
   id              BigInt        @id @default(autoincrement())
   customerId      BigInt
+  assignedAdminId BigInt?
   shippingAddress String
   note            String?       @db.VarChar(255)
   shippingFee     Float         @default(0.00)
@@ -239,10 +241,12 @@ model Order {
   deletedAt DateTime?
 
   customer       Customer        @relation(fields: [customerId], references: [id])
+  assignedAdmin  AdminUser?      @relation(fields: [assignedAdminId], references: [id])
   items          OrderItem[]
   discountOrders DiscountOrder[]
 
   @@index([customerId])
+  @@index([assignedAdminId])
   @@map("orders")
 }
 

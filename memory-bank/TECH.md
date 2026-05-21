@@ -474,3 +474,51 @@ ai.generateAIResponse('test').then(r => console.log(r));
 - Update CORS origins for production domains
 - Generate strong JWT secrets (use openssl rand -base64 32)
 - Set up error monitoring
+
+---
+
+## 🆕 Implementation Notes (May 20, 2026)
+
+### Critical Schema Fix Required
+
+```javascript
+// In prisma/schema.prisma - Order model:
+model Order {
+  // ... existing fields
+  assignedAdminId BigInt?
+
+  // ... existing relations
+  assignedAdmin AdminUser? @relation(fields: [assignedAdminId], references: [id])
+}
+
+// In AdminUser model:
+model AdminUser {
+  // ... existing fields
+  orders Order[]
+}
+```
+
+**Why:** Admin dashboard queries use `assignedAdminId` which doesn't exist
+**Command:** `npm run prisma migrate dev --name "fix_order_admin_relation"`
+
+### Bug Fix: Order Status Queries
+
+```javascript
+// ❌ WRONG (in admin.service.js):
+where: { status: { in: ["PAID"] } }
+
+// ✅ CORRECT:
+where: { paymentStatus: { in: ["PAID"] } }
+```
+
+**Why:** `status` enum is {COMPLETED, CANCELED, PENDING}, payment tracking is `paymentStatus`
+
+### New Search Service Pattern
+
+```javascript
+// src/services/search.service.js
+async function searchGlobal(query, type, limit) { ... }
+async function searchModels(query, filters, limit, skip, sort) { ... }
+async function searchMaterials(query, filters, limit, skip, sort) { ... }
+async function searchTools(query, filters, limit, skip, sort) { ... }
+```

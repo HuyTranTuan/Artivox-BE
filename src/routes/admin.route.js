@@ -6,6 +6,11 @@ const { registerSchema } = require("@/validators/auth.validator");
 
 const router = express.Router();
 router.use(authMiddleware);
+
+// Staff dashboard route - accessible to any authenticated user
+router.get("/staff/dashboard", adminController.getStaffDashboard);
+
+// Admin-only routes
 router.use(restrictTo("ADMIN"));
 
 router.get("/dashboard", adminController.getAdminDashboard);
