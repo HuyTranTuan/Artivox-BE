@@ -111,7 +111,9 @@ model Customer {
   dateOfBirth DateTime?
   gender      Gender?
   slug        String    @unique
-  verifiedAt    DateTime?
+  verifiedAt              DateTime?
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
   deletedAt   DateTime?

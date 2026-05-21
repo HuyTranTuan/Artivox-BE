@@ -23,4 +23,7 @@ router.post("/logout", authMiddleware, authController.logout);
 router.patch("/admin/account", authMiddleware, authController.updateAdminAccount);
 router.patch("/customer/account", authMiddleware, authController.updateCustomerAccount);
 
+// Verify email
+router.get("/verify-email", authController.verifyEmail);
+
 module.exports = router;

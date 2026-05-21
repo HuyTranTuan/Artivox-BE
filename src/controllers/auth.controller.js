@@ -43,6 +43,13 @@ const updateCustomerAccount = catchAsync(async (req, res) => {
   return res.success(data, "Account updated successfully");
 });
 
+// Verify email
+const verifyEmail = catchAsync(async (req, res) => {
+  const { token } = req.query;
+  const data = await authService.verifyEmail(token);
+  return res.success(data, data.message);
+});
+
 module.exports = {
   adminLogin,
   customerRegister,
@@ -51,4 +58,5 @@ module.exports = {
   logout,
   updateAdminAccount,
   updateCustomerAccount,
+  verifyEmail,
 };

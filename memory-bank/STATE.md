@@ -18,7 +18,9 @@
 
 | Feature       | Status | Details                               |
 | ------------- | ------ | ------------------------------------- |
-| Auth          | ✅     | JWT, register, login, logout, refresh |
+| Auth          | ✅     | JWT, register, login, logout, refresh, **email verify** |
+| Mail          | ✅     | Nodemailer, verify-email on register                    |
+| Cron          | ✅     | pg_dump → Google Drive at 3AM daily                     |
 | Products      | ✅     | 50+ catalog endpoints with search     |
 | Orders        | ✅     | Create, approve, track, cancel        |
 | Articles      | ✅     | Multi-language, versioning, approve   |

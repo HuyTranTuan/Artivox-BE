@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { prisma } = require("@libs/prisma");
 
 // AI service for generating responses
 // Supports: OpenAI GPT-4, Groq (free tier available), OpenRouter
@@ -31,7 +32,7 @@ const AI_API_KEY = resolveApiKey();
  */
 function resolveModel() {
   if (process.env.AI_MODEL) return process.env.AI_MODEL;
-  if (AI_PROVIDER === "groq") return "mixtral-8x7b-32768";
+  if (AI_PROVIDER === "groq") return "llama3-8b-8192"; // free tier
   return "gpt-4-turbo-preview";
 }
 
@@ -83,15 +84,31 @@ async function callChatCompletion(apiUrl, payload) {
 /**
  * Build system message based on provider.
  */
-function buildSystemMessage() {
+async function buildWebsiteContext() {
+  try {
+    const [collectionCount, topProducts, totalProducts] = await Promise.all([
+      prisma.collection.count({ where: { deletedAt: null, isActive: true } }),
+      prisma.product.findMany({
+        where: { deletedAt: null, isActive: true },
+        orderBy: { ratingAvg: "desc" },
+        take: 5,
+        select: { name: true, ratingAvg: true, basePrice: true, type: true },
+      }),
+      prisma.product.count({ where: { deletedAt: null, isActive: true } }),
+    ]);
+    const topList = topProducts.map((p) => `${p.name} (${p.type}, ⭐${p.ratingAvg}, ${p.basePrice.toLocaleString()}đ)`).join("; ");
+    return `\nWebsite live data:\n- ${collectionCount} collections available\n- ${totalProducts} total active products\n- Top rated: ${topList}`;
+  } catch {
+    return "";
+  }
+}
+
+function buildSystemMessage(websiteContext = "") {
   return {
     role: "system",
-    content: `You are a helpful customer support assistant for Artivox, 
-a 3D printing materials and tools e-commerce platform. 
-You help customers with product inquiries, orders, technical questions about 3D printing, 
-and general support. Keep responses concise and friendly. 
-Always provide accurate information about 3D printing, materials (FDM, Resin), 
-and tools. If you don't know something, suggest the customer contact support.`,
+    content: `You are a helpful customer support AI for Artivox, a 3D printing e-commerce platform selling models, materials (FDM/Resin), and tools.
+Answer questions about products, collections, orders, pricing, and 3D printing.
+Keep responses concise, friendly, and accurate. If unsure, suggest contacting support.${websiteContext}`,
   };
 }
 
@@ -99,7 +116,8 @@ and tools. If you don't know something, suggest the customer contact support.`,
  * Generate response using OpenAI API (or OpenRouter / compatible endpoints)
  */
 async function generateOpenAIResponse(userMessage, conversationContext = []) {
-  const messages = [buildSystemMessage(), ...conversationContext, { role: "user", content: userMessage }];
+  const websiteContext = await buildWebsiteContext();
+  const messages = [buildSystemMessage(websiteContext), ...conversationContext, { role: "user", content: userMessage }];
 
   return callChatCompletion("https://api.openai.com/v1/chat/completions", {
     model: AI_MODEL,
@@ -115,14 +133,9 @@ async function generateOpenAIResponse(userMessage, conversationContext = []) {
  * Groq is faster and has a free tier
  */
 async function generateGroqResponse(userMessage, conversationContext = []) {
+  const websiteContext = await buildWebsiteContext();
   const messages = [
-    {
-      role: "system",
-      content: `You are a helpful customer support assistant for Artivox, 
-a 3D printing materials and tools e-commerce platform. 
-Keep responses concise (under 200 words). 
-Help with: product questions, orders, 3D printing guidance, material selection.`,
-    },
+    buildSystemMessage(websiteContext),
     ...conversationContext,
     { role: "user", content: userMessage },
   ];
@@ -185,6 +198,7 @@ function buildConversationContext(messages = [], maxMessages = 5) {
 module.exports = {
   generateAIResponse,
   buildConversationContext,
+  buildWebsiteContext,
   generateOpenAIResponse,
   generateGroqResponse,
 };

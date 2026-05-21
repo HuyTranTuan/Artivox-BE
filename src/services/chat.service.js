@@ -1,5 +1,6 @@
 const { prisma } = require("@libs/prisma");
 const notificationService = require("@services/notification.service");
+const { generateAIResponse, buildConversationContext } = require("@services/ai.service");
 
 // Get or create chat room
 async function getOrCreateRoom(adminId, customerId) {
@@ -81,6 +82,33 @@ async function sendMessage(chatRoomId, { senderType, adminId, customerId, conten
     message: fileUrl ? `${senderName} sent a ${fileType || "file"}` : content,
     metadata: { chatRoomId, messageId: message.id, senderId: senderType === "ADMIN" ? adminId : customerId },
   });
+
+  // AI auto-reply when customer sends text (non-blocking)
+  if (senderType === "CUSTOMER" && content && !fileUrl) {
+    prisma.chatMessage
+      .findMany({
+        where: { chatRoomId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+      .then(async (recent) => {
+        const context = buildConversationContext(recent.reverse());
+        const aiReply = await generateAIResponse(content, context);
+        await prisma.chatMessage.create({
+          data: {
+            chatRoomId,
+            senderType: "STAFF",
+            adminId: room.adminId,
+            content: aiReply,
+          },
+        });
+        await prisma.chatRoom.update({
+          where: { id: chatRoomId },
+          data: { updatedAt: new Date() },
+        });
+      })
+      .catch((err) => console.error("[AI] Auto-reply failed:", err.message));
+  }
 
   return message;
 }

@@ -66,7 +66,7 @@ CORS_ORIGINS="http://localhost:5173,http://localhost:3000"
 
 # Optional
 REDIS_URL="redis://localhost:6379"
-BCRYPT_SALT=10
+BCRYPT_SALT=12
 ```
 
 ## Project Structure

@@ -1,10 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { prisma } = require("@libs/prisma");
 const { jwtSecret, jwtRefreshSecret, accessTokenTTL, refreshTokenTTL } = require("@config/auth");
 const slugify = require("@/utils/slugify");
 const { HTTP_CODES } = require("@/config/constants");
 const AppError = require("@/utils/AppError");
+const { sendVerificationEmail } = require("@services/mail.service");
 
 function generateTokens(payload) {
   const accessToken = jwt.sign(payload, jwtSecret, {
@@ -54,8 +56,12 @@ async function customerRegister({ email, password, fullName, phone, address, gen
   const hashedPassword = await bcrypt.hash(password, 12);
   const slug = slugify(fullName || email.split("@")[0]) + "-" + Date.now().toString(36);
 
+  // Generate verification token (random hex, expires 1h)
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
   const user = await prisma.customer.create({
-    data: { email, password: hashedPassword, fullName, phone, address, gender, slug },
+    data: { email, password: hashedPassword, fullName, phone, address, gender, slug, verificationToken, verificationTokenExpiry },
   });
 
   const tokens = generateTokens({
@@ -63,6 +69,12 @@ async function customerRegister({ email, password, fullName, phone, address, gen
     email: user.email,
     type: "customer",
   });
+
+  // Send verification email (non-blocking)
+  sendVerificationEmail(email, verificationToken).catch((err) =>
+    console.error("[Mail] Failed to send verification email:", err.message)
+  );
+
   return {
     ...tokens,
     user: {
@@ -77,15 +89,39 @@ async function customerRegister({ email, password, fullName, phone, address, gen
   };
 }
 
+// Verify email by token
+async function verifyEmail(token) {
+  if (!token) throw new AppError("Token required", HTTP_CODES.BAD_REQUEST);
+
+  const customer = await prisma.customer.findFirst({
+    where: { verificationToken: token, deletedAt: null },
+  });
+
+  if (!customer) throw new AppError("Invalid or expired token", HTTP_CODES.BAD_REQUEST);
+  if (customer.verifiedAt) return { message: "Email already verified" };
+  if (customer.verificationTokenExpiry < new Date())
+    throw new AppError("Token expired", HTTP_CODES.BAD_REQUEST);
+
+  await prisma.customer.update({
+    where: { id: customer.id },
+    data: { verifiedAt: new Date(), verificationToken: null, verificationTokenExpiry: null },
+  });
+
+  return { message: "Email verified successfully" };
+}
+
 // Customer login
 async function customerLogin(email, password) {
   const user = await prisma.customer.findFirst({
     where: { email, deletedAt: null },
   });
+  console.log(user);
+  console.log(password);
   if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
   if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
 
   const isMatch = await bcrypt.compare(password, user.password);
+  console.log(isMatch);
   if (!isMatch) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
 
   const tokens = generateTokens({
@@ -227,4 +263,5 @@ module.exports = {
   logout,
   updateAdminAccount,
   updateCustomerAccount,
+  verifyEmail,
 };

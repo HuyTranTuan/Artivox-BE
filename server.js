@@ -48,10 +48,13 @@ app.use("/api/v1", apiRoutes);
 // const notifNs = io.of("/notifications");
 // notifNs.on("connection", socketNotification);
 
+const { startCronJobs } = require("@services/cron.service");
+
 //////////// Error Handler ////////////
 app.use(errorMiddleware);
 app.use(notfoundMiddleware);
 
 app.listen(port, () => {
   console.log(`\n🚀 Server running on http://${hostname}:${port}`);
+  startCronJobs();
 });
