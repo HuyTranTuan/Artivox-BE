@@ -3,7 +3,7 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   service: process.env.MAIL_SERVICE || "gmail",
   auth: {
-    user: process.env.MAIL_USER || "huychanwork@gmail.com",
+    user: process.env.MAIL_USER || "[EMAIL_ADDRESS]",
     pass: process.env.MAIL_PASS,
   },
 });
@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
  */
 async function sendMail({ to, subject, html, text }) {
   return transporter.sendMail({
-    from: `"Artivox" <${process.env.MAIL_USER || "huychanwork@gmail.com"}>`,
+    from: `"Artivox" <${process.env.MAIL_USER || "[EMAIL_ADDRESS]"}>`,
     to,
     subject,
     html,
@@ -28,9 +28,8 @@ async function sendMail({ to, subject, html, text }) {
  * @param {string} token - JWT access token
  */
 async function sendVerificationEmail(to, token) {
-  const host = process.env.APP_HOST || "localhost";
-  const port = process.env.API_PORT || 3000;
-  const verifyUrl = `http://${host}:${port}/api/v1/auth/verify-email?token=${token}`;
+  const feCustomerUrl = process.env.FE_CUSTOMER_URL || "http://localhost:3000";
+  const verifyUrl = `${feCustomerUrl}/auth/verify-email?token=${token}`;
 
   const html = `
 <!DOCTYPE html>

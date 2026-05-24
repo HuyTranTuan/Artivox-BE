@@ -12,4 +12,37 @@ async function getCustomerActivityLogs() {
   });
 }
 
-module.exports = { getCustomerActivityLogs };
+async function createCustomerActivityLog(data) {
+  return prisma.customerActivityLog.create({
+    data,
+  });
+}
+
+async function createLoginSuccessLog(email, userId, ip, userAgent, type = "CUSTOMER") {
+  return prisma.customerActivityLog.create({
+    data: {
+      type,
+      customerId: userId,
+      email,
+      action: "LOGIN",
+      description: "Login success",
+      ipAddress: ip,
+      userAgent: userAgent,
+    },
+  });
+}
+
+async function createLoginFailLog(email, ip, userAgent, type = "CUSTOMER") {
+  return prisma.customerActivityLog.create({
+    data: {
+      type,
+      email,
+      action: "LOGIN_FAILED",
+      description: "Login failed",
+      ipAddress: ip,
+      userAgent: userAgent,
+    },
+  });
+}
+
+module.exports = { getCustomerActivityLogs, createCustomerActivityLog, createLoginSuccessLog, createLoginFailLog };

@@ -115,13 +115,10 @@ async function customerLogin(email, password) {
   const user = await prisma.customer.findFirst({
     where: { email, deletedAt: null },
   });
-  console.log(user);
-  console.log(password);
   if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
   if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
 
   const isMatch = await bcrypt.compare(password, user.password);
-  console.log(isMatch);
   if (!isMatch) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
 
   const tokens = generateTokens({
@@ -136,6 +133,13 @@ async function customerLogin(email, password) {
       email: user.email,
       fullName: user.fullName,
       slug: user.slug,
+      verified: user.verifiedAt,
+      phone: user.phone,
+      address: user.address,
+      gender: user.gender,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      dob: user.dateOfBirth
     },
   };
 }
@@ -255,6 +259,29 @@ async function updateCustomerAccount(customerId, { fullName, email, phone, addre
   };
 }
 
+async function resendVerifyEmail(email) {
+  const customer = await prisma.customer.findFirst({
+    where: { email, deletedAt: null },
+  });
+
+  if (!customer) throw new AppError("User not found", HTTP_CODES.NOT_FOUND);
+  if (customer.verifiedAt) throw new AppError("Email already verified", HTTP_CODES.CONFLICT);
+
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const verificationTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+  await prisma.customer.update({
+    where: { id: customer.id },
+    data: { verificationToken, verificationTokenExpiry },
+  });
+
+  sendVerificationEmail(email, verificationToken).catch((err) =>
+    console.error("[Mail] Failed to resend verification email:", err.message)
+  );
+
+  return { message: "Verification email sent successfully" };
+}
+
 module.exports = {
   adminLogin,
   customerRegister,
@@ -264,4 +291,5 @@ module.exports = {
   updateAdminAccount,
   updateCustomerAccount,
   verifyEmail,
+  resendVerifyEmail,
 };

@@ -1,21 +1,23 @@
 const { prisma } = require("@libs/prisma");
+const AppError = require("@utils/AppError");
+const { HTTP_CODES } = require("@config/constants");
 const notificationService = require("@services/notification.service");
 const { generateAIResponse, buildConversationContext } = require("@services/ai.service");
 
-// Get or create chat room
-async function getOrCreateRoom(adminId, customerId) {
+// Get or create chat room (staff creates with customerId, room "named" by customerId)
+async function getOrCreateRoom(staffId, customerId) {
   return prisma.chatRoom.upsert({
-    where: { adminId_customerId: { adminId, customerId } },
+    where: { adminId_customerId: { adminId: BigInt(staffId), customerId: BigInt(customerId) } },
     update: { isActive: true },
-    create: { adminId, customerId },
+    create: { adminId: BigInt(staffId), customerId: BigInt(customerId) },
     include: { customer: { select: { id: true, fullName: true, slug: true } } },
   });
 }
 
-// Get admin's chat rooms
+// Get staff/admin chat rooms
 async function getAdminRooms(adminId) {
   return prisma.chatRoom.findMany({
-    where: { adminId, isActive: true },
+    where: { adminId: BigInt(adminId), isActive: true },
     include: {
       customer: { select: { id: true, fullName: true, email: true, slug: true } },
       messages: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -24,96 +26,67 @@ async function getAdminRooms(adminId) {
   });
 }
 
-// Get customer's chat rooms
+// Get customer's chat room(s)
 async function getCustomerRooms(customerId) {
   return prisma.chatRoom.findMany({
-    where: { customerId, isActive: true },
+    where: { customerId: BigInt(customerId), isActive: true },
     include: {
-      admin: { select: { id: true, fullName: true, slug: true } },
+      admin: { select: { id: true, fullName: true } },
       messages: { orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { updatedAt: "desc" },
   });
 }
 
-// Get messages in room
+// Get messages in a room (verify caller is a participant)
 async function getMessages(chatRoomId, userId) {
   const room = await prisma.chatRoom.findFirst({
-    where: { id: BigInt(chatRoomId), OR: [{ adminId: BigInt(userId) }, { customerId: BigInt(userId) }] },
+    where: {
+      id: BigInt(chatRoomId),
+      OR: [{ adminId: BigInt(userId) }, { customerId: BigInt(userId) }],
+    },
   });
-  if (!room) return res.notFound();
+  if (!room) throw new AppError("Room not found", HTTP_CODES.NOT_FOUND);
 
   return prisma.chatMessage.findMany({
-    where: { chatRoomId },
+    where: { chatRoomId: BigInt(chatRoomId) },
     orderBy: { createdAt: "asc" },
   });
 }
 
-// Send message with optional file/image
+// Send message; non-blocking AI auto-reply when CUSTOMER sends text
 async function sendMessage(chatRoomId, { senderType, adminId, customerId, content, fileUrl, fileType }) {
   const room = await prisma.chatRoom.findUnique({ where: { id: BigInt(chatRoomId) } });
-  if (!room) return res.notFound();
+  if (!room) throw new AppError("Room not found", HTTP_CODES.NOT_FOUND);
 
   const message = await prisma.chatMessage.create({
     data: {
-      chatRoomId,
+      chatRoomId: BigInt(chatRoomId),
       senderType,
-      adminId,
-      customerId,
+      adminId: adminId ? BigInt(adminId) : null,
+      customerId: customerId ? BigInt(customerId) : null,
       content,
       fileUrl: fileUrl || null,
-      fileType: fileType || null, // 'IMAGE' or 'FILE'
+      fileType: fileType || null,
     },
   });
 
-  // Update chat room's updatedAt
-  await prisma.chatRoom.update({
-    where: { id: chatRoomId },
-    data: { updatedAt: new Date() },
-  });
+  await prisma.chatRoom.update({ where: { id: BigInt(chatRoomId) }, data: { updatedAt: new Date() } });
 
-  // Send notification to the recipient
+  // Notify recipient
   const recipientId = senderType === "ADMIN" ? room.customerId : room.adminId;
-  const senderName = senderType === "ADMIN" ? "Admin" : "Customer";
-
+  const senderName = senderType === "ADMIN" ? "Staff" : "Customer";
   await notificationService.createNotification(recipientId, senderType === "ADMIN" ? "CUSTOMER" : "ADMIN", {
     type: "CHAT_MESSAGE",
     title: `New message from ${senderName}`,
     message: fileUrl ? `${senderName} sent a ${fileType || "file"}` : content,
-    metadata: { chatRoomId, messageId: message.id, senderId: senderType === "ADMIN" ? adminId : customerId },
+    metadata: { chatRoomId, messageId: message.id.toString(), senderId: senderType === "ADMIN" ? adminId : customerId },
   });
-
-  // AI auto-reply when customer sends text (non-blocking)
-  if (senderType === "CUSTOMER" && content && !fileUrl) {
-    prisma.chatMessage
-      .findMany({
-        where: { chatRoomId },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      })
-      .then(async (recent) => {
-        const context = buildConversationContext(recent.reverse());
-        const aiReply = await generateAIResponse(content, context);
-        await prisma.chatMessage.create({
-          data: {
-            chatRoomId,
-            senderType: "STAFF",
-            adminId: room.adminId,
-            content: aiReply,
-          },
-        });
-        await prisma.chatRoom.update({
-          where: { id: chatRoomId },
-          data: { updatedAt: new Date() },
-        });
-      })
-      .catch((err) => console.error("[AI] Auto-reply failed:", err.message));
-  }
 
   return message;
 }
 
-// Mark messages as read
+// Mark unread messages as read
 async function markAsRead(chatRoomId, readerType) {
   const oppositeType = readerType === "ADMIN" ? "CUSTOMER" : "ADMIN";
   return prisma.chatMessage.updateMany({
@@ -122,4 +95,11 @@ async function markAsRead(chatRoomId, readerType) {
   });
 }
 
-module.exports = { getOrCreateRoom, getAdminRooms, getCustomerRooms, getMessages, sendMessage, markAsRead };
+// Standalone AI chat (no room — used by AIChatPanel)
+async function aiChat(message, history = []) {
+  const context = buildConversationContext(history);
+  const reply = await generateAIResponse(message, context);
+  return reply;
+}
+
+module.exports = { getOrCreateRoom, getAdminRooms, getCustomerRooms, getMessages, sendMessage, markAsRead, aiChat };

@@ -7,6 +7,14 @@ const createOrder = catchAsync(async (req, res) => {
   const userID = req.user.id;
   const body = req.body;
   const data = await orderService.createOrder(userID, body);
+  
+  // Emit to admins
+  req.app.get("io").of("/notifications").to("admin_room").emit("new_order", {
+    orderId: data.id.toString(),
+    customerId: userID,
+    total: data.totalAmount,
+  });
+
   return res.success(data, "Order created", HTTP_CODES.CREATED);
 });
 
@@ -22,6 +30,13 @@ const cancelOrder = catchAsync(async (req, res) => {
   const userID = req.user.id;
   const { orderId } = req.params;
   const data = await orderService.cancelOrder(orderId, userID);
+  
+  // Emit to client
+  req.app.get("io").of("/chat").to(`chat:${userID}`).emit("order_status_updated", {
+    orderId: data.id.toString(),
+    status: data.status,
+  });
+
   return res.success(data, "Order cancelled");
 });
 
@@ -44,6 +59,13 @@ const approveOrder = catchAsync(async (req, res) => {
   const { orderId } = req.params;
   const data = await orderService.approveOrder(orderId);
   if (!data) return res.notFound();
+  
+  // Emit to client
+  req.app.get("io").of("/chat").to(`chat:${data.customerId}`).emit("order_status_updated", {
+    orderId: data.id.toString(),
+    status: data.status,
+  });
+
   return res.success(data, "Order approved");
 });
 
