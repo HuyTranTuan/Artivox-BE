@@ -1,5 +1,6 @@
 const { HTTP_CODES } = require("@/config/constants");
 const adminService = require("@services/admin.service");
+const imageService = require("@services/image.service");
 const catchAsync = require("@utils/catchAsync");
 
 const getAdminDashboard = catchAsync(async (req, res) => {
@@ -63,6 +64,11 @@ const getStaffDashboard = catchAsync(async (req, res) => {
   return res.success(data, "Staff dashboard fetched!", HTTP_CODES.OK);
 });
 
+const uploadStaffImage = catchAsync(async (req, res) => {
+  const data = await imageService.uploadStaffImage(req.file, req.user.id);
+  return res.success(data, "Uploaded", HTTP_CODES.CREATED);
+});
+
 module.exports = {
   getAdminDashboard,
   getAdminUsers,
@@ -75,4 +81,5 @@ module.exports = {
   createStaff,
   decentralizeStaff,
   getStaffDashboard,
+  uploadStaffImage,
 };

@@ -1,0 +1,24 @@
+// ─── Refresh Tokens (Blacklist) ─────────────────
+
+model RefreshToken {
+  id         BigInt   @id @default(autoincrement())
+  token      String   @unique @db.VarChar(512) 
+  customerId BigInt?
+  adminId    BigInt?
+  
+  // Trạng thái Blacklist (Soft Delete)
+  isRevoked  Boolean  @default(false) 
+  
+  expiresAt  DateTime
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  admin    AdminUser? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([customerId])
+  @@index([adminId])
+  @@map("refresh_tokens")
+}

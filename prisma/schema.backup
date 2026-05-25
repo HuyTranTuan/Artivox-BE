@@ -1,0 +1,500 @@
+// generator client {
+//   provider = "prisma-client-js"
+//   output   = "../generated/"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+// }
+
+// // ─── Enums ───────────────────────────────────────────
+
+// enum AdminRole {
+//   ADMIN
+//   STAFF
+// }
+
+// enum ProductType {
+//   MODEL
+//   MATERIAL
+//   TOOL
+// }
+
+// enum MaterialType {
+//   FDM
+//   RESIN
+// }
+
+// enum MaterialUnit {
+//   GRAM
+//   PIECE
+//   ROLL
+//   BOX
+// }
+
+// enum OrderStatus {
+//   COMPLETED
+//   CANCELED
+//   PENDING
+// }
+
+// enum PaymentStatus {
+//   PAID
+//   PENDING
+//   REFUNDED
+//   REFUNDING
+//   FAILED
+// }
+
+// enum PaymentMethod {
+//   COD
+//   BANK_TRANSFER
+//   ZALOPAY
+// }
+
+// enum DiscountType {
+//   FIXED
+//   PERCENT
+// }
+
+// enum ChatMessageSender {
+//   STAFF
+//   CUSTOMER
+// }
+
+// enum NotificationType {
+//   ORDER_CREATED
+//   ORDER_APPROVED
+//   ARTICLE_CREATED
+//   ARTICLE_APPROVED
+//   CHAT_MESSAGE
+// }
+
+// enum Gender {
+//   M
+//   F
+// }
+
+// enum ImageRole {
+//   THUMBNAIL_BEFORE 
+//   THUMBNAIL_AFTER  
+//   GALLERY          
+// }
+
+// // ─── Admin Users (Staff / Admins) ─────────
+
+// model AdminUser {
+//   id         BigInt    @id @default(autoincrement())
+//   email      String    @unique @db.VarChar(50)
+//   password   String    @db.VarChar(100)
+//   fullName   String    @db.VarChar(100)
+//   phone      String    @unique @db.VarChar(15)
+//   role       AdminRole @default(STAFF)
+//   permission String    @default("{create:false,update:false,del:false}")
+//   createdAt  DateTime  @default(now()) @db.Timestamp
+//   updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamp
+//   deletedAt  DateTime? @db.Timestamp
+
+//   articles     Article[]
+//   chatRooms    ChatRoom[]
+//   chatMessages ChatMessage[]
+//   orders       Order[]
+
+//   @@index([email])
+//   @@index([createdAt])
+//   @@map("admin_users")
+// }
+
+// // ─── Users (Customers) ────────────────────
+
+// model Customer {
+//   id                      BigInt    @id @default(autoincrement())
+//   email                   String    @unique
+//   password                String
+//   fullName                String?
+//   phone                   String?
+//   address                 String?
+//   dateOfBirth             DateTime?
+//   gender                  Gender?
+//   slug                    String    @unique
+//   verifiedAt              DateTime?
+//   verificationToken       String?
+//   verificationTokenExpiry DateTime?
+//   createdAt               DateTime  @default(now())
+//   updatedAt               DateTime  @default(now()) @updatedAt
+//   deletedAt               DateTime?
+
+//   orders       Order[]
+//   cartItems    CartItem[]
+//   chatRooms    ChatRoom[]
+//   chatMessages ChatMessage[]
+//   activityLogs CustomerActivityLog[]
+
+//   @@index([email])
+//   @@index([slug])
+//   @@map("customers")
+// }
+
+// // ─── Catalog ─────────────────────────────────────────
+
+// model Collection {
+//   id          BigInt    @id @default(autoincrement())
+//   name        String    @unique
+//   slug        String    @unique
+//   description String?
+//   image       String?
+//   isActive    Boolean   @default(true)
+
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @default(now()) @updatedAt
+//   deletedAt DateTime?
+
+//   products Product[]
+
+//   @@index([slug])
+//   @@map("collections")
+// }
+
+// model Product {
+//   id                BigInt      @id @default(autoincrement())
+//   name              String      @unique
+//   slug              String      @unique
+//   description       String?
+//   type              ProductType
+//   collectionId      BigInt?
+//   discountCampainId BigInt?
+//   isActive          Boolean     @default(true)
+
+//   stock           Int     @default(0)
+//   basePrice       Float
+//   discountedPrice Float?
+//   ratingAvg       Float   @default(0)
+
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @default(now()) @updatedAt
+//   deletedAt DateTime?
+
+//   model3D  Model3D?
+//   material Material?
+//   tool     Tool?
+//   images   ProductImage[]
+
+//   orderItems      OrderItem[]
+//   collection      Collection? @relation(fields: [collectionId], references: [id])
+//   discountCampain Discount?   @relation(fields: [discountCampainId], references: [id])
+
+//   // [TỐI ƯU] Các Index đã được cập nhật cho tìm kiếm và lọc dữ liệu
+//   @@index([slug])
+//   @@index([name])                     // [TỐI ƯU] Index hỗ trợ tính năng search sản phẩm theo tên
+//   @@index([type])
+//   @@index([collectionId, isActive])   // [TỐI ƯU] Composite Index: Lọc danh sách sản phẩm hiển thị trong Collection
+//   @@index([collectionId, basePrice])  // [TỐI ƯU] Composite Index: Phục vụ tính năng lọc theo khoảng giá trong một Collection
+  
+//   @@map("products")
+// }
+
+// model ProductImage {
+//   id        BigInt    @id @default(autoincrement())
+//   productId BigInt
+//   url       String    
+//   altText   String?   
+//   role      ImageRole @default(GALLERY)
+//   sortOrder Int       @default(0) 
+
+//   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+//   // [TỐI ƯU] Composite Index thay thế cho Index đơn: Lọc cực nhanh ảnh Before/After khi truy vấn List Product
+//   @@index([productId, role])
+  
+//   @@map("product_images")
+// }
+
+// model Model3D {
+//   id             BigInt   @id @default(autoincrement())
+//   productId      BigInt   @unique
+//   previewFileUrl String   
+//   sourceFileUrl  String   
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+//   @@map("model_3d")
+// }
+
+// model Material {
+//   id        BigInt       @id @default(autoincrement())
+//   productId BigInt       @unique
+//   type      MaterialType
+//   color     String?
+//   unit      MaterialUnit
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+//   @@map("materials")
+// }
+
+// model Tool {
+//   id             BigInt   @id @default(autoincrement())
+//   slug           String   @unique
+//   productId      BigInt   @unique
+//   specifications String?
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+//   @@map("tools")
+// }
+
+// // ─── Orders & Cart ───────────────────────────────────
+
+// model Order {
+//   id              BigInt        @id @default(autoincrement())
+//   customerId      BigInt
+//   assignedAdminId BigInt?
+//   shippingAddress String
+//   note            String?       @db.VarChar(255)
+//   shippingFee     Float         @default(0.00)
+//   discountAmount  Float         @default(0.00)
+//   totalAmount     Float
+//   paidAt          DateTime?
+//   status          OrderStatus   @default(PENDING)
+//   paymentMethod   PaymentMethod @default(BANK_TRANSFER)
+//   paymentStatus   PaymentStatus @default(PENDING)
+
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @default(now()) @updatedAt
+//   deletedAt DateTime?
+
+//   customer      Customer        @relation(fields: [customerId], references: [id])
+//   assignedAdmin AdminUser?      @relation(fields: [assignedAdminId], references: [id])
+//   items         OrderItem[]
+//   discountOrders DiscountOrder[]
+
+//   @@index([customerId])
+//   @@index([assignedAdminId])
+//   @@map("orders")
+// }
+
+// model OrderItem {
+//   id        BigInt @id @default(autoincrement())
+//   orderId   BigInt
+//   productId BigInt
+//   quantity  Int    @default(1)
+
+//   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+//   product Product @relation(fields: [productId], references: [id])
+
+//   @@index([orderId])
+//   @@index([productId])
+//   @@map("order_items")
+// }
+
+// model CartItem {
+//   id         BigInt   @id @default(autoincrement())
+//   customerId BigInt
+//   productId  BigInt
+//   quantity   Int      @default(1)
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+//   @@unique([customerId, productId])
+//   @@index([customerId])
+//   @@map("cart_items")
+// }
+
+// // ─── Discounts ───────────────────────────────────────
+
+// model Discount {
+//   id             BigInt       @id @default(autoincrement())
+//   code           String       @unique
+//   name           String
+//   slug           String       @unique
+//   type           DiscountType
+//   value          Float
+//   minOrderAmount Float?
+//   maxUses        Int?
+//   usedCount      Int          @default(0)
+//   isActive       Boolean      @default(true)
+//   startsAt       DateTime?
+//   expiresAt      DateTime?
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   products Product[]
+
+//   @@index([code])
+//   @@index([slug])
+//   @@map("discounts")
+// }
+
+// model DiscountOrder {
+//   id        BigInt    @id @default(autoincrement())
+//   code      String?   @db.VarChar(10)
+//   name      String?   @db.VarChar(50)
+//   orderId   BigInt    @db.BigInt
+//   value     Float     @default(10000.00)
+//   startsAt  DateTime  @default(now())
+//   expiresAt DateTime?
+
+//   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+//   @@index([orderId])
+//   @@map("discount_orders")
+// }
+
+// // ─── Articles (Multi-language) ───────────────────────
+
+// model Article {
+//   id          BigInt    @id @default(autoincrement())
+//   slug        String    @unique
+//   authorId    BigInt
+//   coverImage  String?
+//   publishedAt DateTime?
+  
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @default(now()) @updatedAt
+//   deletedAt DateTime?
+
+//   author       AdminUser            @relation(fields: [authorId], references: [id])
+//   translations ArticleTranslation[]
+
+//   @@index([slug])
+//   @@index([authorId])
+//   @@map("articles")
+// }
+
+// model ArticleTranslation {
+//   id        BigInt   @id @default(autoincrement())
+//   articleId BigInt
+//   locale    String   @db.VarChar(10)
+//   title     String
+//   content   String
+//   summary   String?
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+//   @@unique([articleId, locale])
+//   @@map("article_translations")
+// }
+
+// // ─── Chat System ─────────────────────────────────────
+
+// model ChatRoom {
+//   id         BigInt   @id @default(autoincrement())
+//   adminId    BigInt
+//   customerId BigInt
+//   isActive   Boolean  @default(true)
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   admin    AdminUser     @relation(fields: [adminId], references: [id])
+//   customer Customer      @relation(fields: [customerId], references: [id])
+//   messages ChatMessage[]
+
+//   @@unique([adminId, customerId])
+//   @@index([adminId])
+//   @@index([customerId])
+//   @@map("chat_rooms")
+// }
+
+// model ChatMessage {
+//   id         BigInt            @id @default(autoincrement())
+//   chatRoomId BigInt
+//   senderType ChatMessageSender
+//   adminId    BigInt?
+//   customerId BigInt?
+//   content    String
+//   fileUrl    String?
+//   fileType   String?
+//   isRead     Boolean           @default(false)
+  
+//   createdAt DateTime @default(now())
+
+//   chatRoom ChatRoom   @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+//   admin    AdminUser? @relation(fields: [adminId], references: [id])
+//   customer Customer?  @relation(fields: [customerId], references: [id])
+
+//   @@index([chatRoomId])
+//   @@index([createdAt])
+//   @@map("chat_messages")
+// }
+
+// // ─── Activity Logs ───────────────────────────────────
+
+// model CustomerActivityLog {
+//   id         BigInt   @id @default(autoincrement())
+//   customerId BigInt
+//   action     String
+//   metadata   Json?
+  
+//   createdAt DateTime @default(now())
+
+//   customer Customer @relation(fields: [customerId], references: [id])
+
+//   @@index([customerId])
+//   @@index([createdAt])
+//   @@map("customer_activity_logs")
+// }
+
+// // ─── Notifications ───────────────────────────────────
+
+// model Notification {
+//   id            BigInt           @id @default(autoincrement())
+//   type          NotificationType
+//   recipientId   BigInt
+//   recipientType String
+//   title         String
+//   message       String
+//   metadata      Json?
+//   isRead        Boolean          @default(false)
+//   readAt        DateTime?
+  
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @default(now()) @updatedAt
+
+//   @@index([recipientId])
+//   @@index([recipientType])
+//   @@index([createdAt])
+//   @@index([isRead])
+//   @@map("notifications")
+// }
+
+// // ─── Refresh Tokens (Blacklist) ─────────────────
+
+// model RefreshToken {
+//   id         BigInt   @id @default(autoincrement())
+//   token      String   @unique @db.VarChar(512) 
+//   customerId BigInt?
+//   adminId    BigInt?
+  
+//   // Trạng thái Blacklist (Soft Delete)
+//   isRevoked  Boolean  @default(false) 
+  
+//   expiresAt  DateTime
+  
+//   createdAt  DateTime @default(now())
+//   updatedAt  DateTime @default(now()) @updatedAt
+
+//   customer Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+//   admin    AdminUser? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   @@index([token])
+//   @@index([customerId])
+//   @@index([adminId])
+//   @@map("refresh_tokens")
+// }

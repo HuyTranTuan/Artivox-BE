@@ -1,10 +1,21 @@
 const modelsService = require("@services/models.service");
 const catchAsync = require("@utils/catchAsync");
+const { normalizeCatalogPagination } = require("@utils/catalogPagination");
 
 // Fetch all model products
 const getModels = catchAsync(async (req, res) => {
-  const data = await modelsService.getModels();
-  return res.success(data, "Models fetched");
+  const query = normalizeCatalogPagination(req.query);
+  const data = await modelsService.getModels(query);
+
+  return res.paginatedSuccess(
+    data.items,
+    {
+      total: data.total,
+      limit: data.limit,
+      skip: data.skip,
+    },
+    "Models fetched",
+  );
 });
 
 // Fetch a single model product by slug

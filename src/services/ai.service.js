@@ -1,47 +1,22 @@
 const axios = require("axios");
 const { prisma } = require("@libs/prisma");
 
-// AI service for generating responses
-// Supports: OpenAI GPT-4, Groq (free tier available), OpenRouter
+const AI_PROVIDER = process.env.AI_PROVIDER || "groq";
 
-const AI_PROVIDER = process.env.AI_PROVIDER || "openai"; // "openai" or "groq"
-
-/**
- * Resolve AI API key from multiple possible env variable names.
- * Supports different naming conventions across environments.
- */
 function resolveApiKey() {
-  // Primary keys
-  if (process.env.AI_API_KEY) return process.env.AI_API_KEY;
   if (AI_PROVIDER === "groq" && process.env.GROQ_API_KEY) return process.env.GROQ_API_KEY;
-  if (AI_PROVIDER === "openai" && process.env.OPENAI_API_KEY) return process.env.OPENAI_API_KEY;
-
-  // Fallback keys (legacy / gateway support)
-  if (process.env.OPENROUTER_GATEWAY_API_KEY) return process.env.OPENROUTER_GATEWAY_API_KEY;
-  if (process.env.VERCEL_GATEWAY_API_KEY) return process.env.VERCEL_GATEWAY_API_KEY;
-  if (process.env.AI_API_KEY_OPENAI) return process.env.AI_API_KEY_OPENAI;
-  if (process.env.AI_API_KEY_GROQ) return process.env.AI_API_KEY_GROQ;
-
+  if (AI_PROVIDER === "openrouter" && process.env.OPENROUTER_GATEWAY_API_KEY) return process.env.OPENROUTER_GATEWAY_API_KEY;
   return null;
+}
+function resolveModel() {
+  if (process.env.AI_MODEL) return process.env.AI_MODEL;
+  if (AI_PROVIDER === "groq") return "llama3-8b-8192";
+  return "nvidia/nemotron-3-super-120b-a12b:free";
 }
 
 const AI_API_KEY = resolveApiKey();
-
-/**
- * Resolve the model to use based on provider.
- */
-function resolveModel() {
-  if (process.env.AI_MODEL) return process.env.AI_MODEL;
-  if (AI_PROVIDER === "groq") return "llama3-8b-8192"; // free tier
-  return "gpt-4-turbo-preview";
-}
-
 const AI_MODEL = resolveModel();
 
-/**
- * Generate AI response for chat message
- * Integrates with OpenAI, Groq, or OpenRouter API
- */
 async function generateAIResponse(userMessage, conversationContext = []) {
   if (!AI_API_KEY) {
     console.warn("AI_API_KEY not configured in .env, returning default response");

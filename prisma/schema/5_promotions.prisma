@@ -1,0 +1,40 @@
+// ─── Discounts ───────────────────────────────────────
+
+model Discount {
+  id             BigInt       @id @default(autoincrement())
+  code           String       @unique
+  name           String
+  slug           String       @unique
+  type           DiscountType
+  value          Float
+  minOrderAmount Float?
+  maxUses        Int?
+  usedCount      Int          @default(0)
+  isActive       Boolean      @default(true)
+  startsAt       DateTime?
+  expiresAt      DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  products Product[]
+
+  @@index([code])
+  @@index([slug])
+  @@map("discounts")
+}
+
+model DiscountOrder {
+  id        BigInt    @id @default(autoincrement())
+  code      String?   @db.VarChar(10)
+  name      String?   @db.VarChar(50)
+  orderId   BigInt    @db.BigInt
+  value     Float     @default(10000.00)
+  startsAt  DateTime  @default(now())
+  expiresAt DateTime?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("discount_orders")
+}

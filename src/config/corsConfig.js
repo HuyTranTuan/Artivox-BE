@@ -1,5 +1,5 @@
-const urlList = JSON.parse(process.env.FE_URL);
-const methods = ["GET", "POST"];
+const urlList = JSON.parse(process.env.FE_URL || '[]');
+const methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
 
 const corsConfig = {
   origin: urlList,

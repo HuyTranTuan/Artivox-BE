@@ -1,9 +1,20 @@
 const collectionService = require("@services/collection.service");
+const { normalizeCatalogPagination } = require("@utils/catalogPagination");
 const catchAsync = require("@utils/catchAsync");
 
 const getCollections = catchAsync(async (req, res) => {
-  const data = await collectionService.getCollections();
-  return res.success(data, "Collections fetched");
+  const query = normalizeCatalogPagination(req.query);
+  const data = await collectionService.getCollections(query);
+
+  return res.paginatedSuccess(
+    data.items,
+    {
+      total: data.total,
+      limit: data.limit,
+      skip: data.skip,
+    },
+    "Collections fetched",
+  );
 });
 
 const getCollectionBySlug = catchAsync(async (req, res) => {

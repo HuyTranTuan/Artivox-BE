@@ -23,10 +23,16 @@ CREATE TYPE "PaymentMethod" AS ENUM ('COD', 'BANK_TRANSFER', 'ZALOPAY');
 CREATE TYPE "DiscountType" AS ENUM ('FIXED', 'PERCENT');
 
 -- CreateEnum
-CREATE TYPE "ChatMessageSender" AS ENUM ('ADMIN', 'CUSTOMER');
+CREATE TYPE "ChatMessageSender" AS ENUM ('STAFF', 'CUSTOMER');
+
+-- CreateEnum
+CREATE TYPE "NotificationType" AS ENUM ('ORDER_CREATED', 'ORDER_APPROVED', 'ARTICLE_CREATED', 'ARTICLE_APPROVED', 'CHAT_MESSAGE');
 
 -- CreateEnum
 CREATE TYPE "Gender" AS ENUM ('M', 'F');
+
+-- CreateEnum
+CREATE TYPE "ImageRole" AS ENUM ('THUMBNAIL_BEFORE', 'THUMBNAIL_AFTER', 'GALLERY');
 
 -- CreateTable
 CREATE TABLE "admin_users" (
@@ -36,7 +42,7 @@ CREATE TABLE "admin_users" (
     "fullName" VARCHAR(100) NOT NULL,
     "phone" VARCHAR(15) NOT NULL,
     "role" "AdminRole" NOT NULL DEFAULT 'STAFF',
-    "isActive" BOOLEAN NOT NULL DEFAULT false,
+    "permission" TEXT NOT NULL DEFAULT '{create:false,update:false,del:false}',
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP,
@@ -55,12 +61,25 @@ CREATE TABLE "customers" (
     "dateOfBirth" TIMESTAMP(3),
     "gender" "Gender",
     "slug" TEXT NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "verifiedAt" TIMESTAMP(3),
+    "verificationToken" TEXT,
+    "verificationTokenExpiry" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "customers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "customer_activity_logs" (
+    "id" BIGSERIAL NOT NULL,
+    "customerId" BIGINT NOT NULL,
+    "action" TEXT NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "customer_activity_logs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -72,7 +91,7 @@ CREATE TABLE "collections" (
     "image" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "collections_pkey" PRIMARY KEY ("id")
@@ -83,7 +102,6 @@ CREATE TABLE "products" (
     "id" BIGSERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "thumbnail" TEXT,
     "description" TEXT,
     "type" "ProductType" NOT NULL,
     "collectionId" BIGINT,
@@ -92,22 +110,34 @@ CREATE TABLE "products" (
     "stock" INTEGER NOT NULL DEFAULT 0,
     "basePrice" DOUBLE PRECISION NOT NULL,
     "discountedPrice" DOUBLE PRECISION,
-    "images" TEXT[],
     "ratingAvg" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
+CREATE TABLE "product_images" (
+    "id" BIGSERIAL NOT NULL,
+    "productId" BIGINT NOT NULL,
+    "url" TEXT NOT NULL,
+    "altText" TEXT,
+    "role" "ImageRole" NOT NULL DEFAULT 'GALLERY',
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "product_images_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "model_3d" (
     "id" BIGSERIAL NOT NULL,
     "productId" BIGINT NOT NULL,
-    "fileUrl" TEXT NOT NULL,
+    "previewFileUrl" TEXT NOT NULL,
+    "sourceFileUrl" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "model_3d_pkey" PRIMARY KEY ("id")
 );
@@ -120,7 +150,7 @@ CREATE TABLE "materials" (
     "color" TEXT,
     "unit" "MaterialUnit" NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "materials_pkey" PRIMARY KEY ("id")
 );
@@ -132,7 +162,7 @@ CREATE TABLE "tools" (
     "productId" BIGINT NOT NULL,
     "specifications" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "tools_pkey" PRIMARY KEY ("id")
 );
@@ -141,6 +171,7 @@ CREATE TABLE "tools" (
 CREATE TABLE "orders" (
     "id" BIGSERIAL NOT NULL,
     "customerId" BIGINT NOT NULL,
+    "assignedAdminId" BIGINT,
     "shippingAddress" TEXT NOT NULL,
     "note" VARCHAR(255),
     "shippingFee" DOUBLE PRECISION NOT NULL DEFAULT 0.00,
@@ -151,7 +182,7 @@ CREATE TABLE "orders" (
     "paymentMethod" "PaymentMethod" NOT NULL DEFAULT 'BANK_TRANSFER',
     "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "orders_pkey" PRIMARY KEY ("id")
@@ -174,7 +205,7 @@ CREATE TABLE "cart_items" (
     "productId" BIGINT NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "cart_items_pkey" PRIMARY KEY ("id")
 );
@@ -194,7 +225,7 @@ CREATE TABLE "discounts" (
     "startsAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "discounts_pkey" PRIMARY KEY ("id")
 );
@@ -218,10 +249,9 @@ CREATE TABLE "articles" (
     "slug" TEXT NOT NULL,
     "authorId" BIGINT NOT NULL,
     "coverImage" TEXT,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "publishedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "articles_pkey" PRIMARY KEY ("id")
@@ -236,7 +266,7 @@ CREATE TABLE "article_translations" (
     "content" TEXT NOT NULL,
     "summary" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "article_translations_pkey" PRIMARY KEY ("id")
 );
@@ -248,7 +278,7 @@ CREATE TABLE "chat_rooms" (
     "customerId" BIGINT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "chat_rooms_pkey" PRIMARY KEY ("id")
 );
@@ -261,6 +291,8 @@ CREATE TABLE "chat_messages" (
     "adminId" BIGINT,
     "customerId" BIGINT,
     "content" TEXT NOT NULL,
+    "fileUrl" TEXT,
+    "fileType" TEXT,
     "isRead" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -268,14 +300,34 @@ CREATE TABLE "chat_messages" (
 );
 
 -- CreateTable
-CREATE TABLE "customer_activity_logs" (
+CREATE TABLE "notifications" (
     "id" BIGSERIAL NOT NULL,
-    "customerId" BIGINT NOT NULL,
-    "action" TEXT NOT NULL,
+    "type" "NotificationType" NOT NULL,
+    "recipientId" BIGINT NOT NULL,
+    "recipientType" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
     "metadata" JSONB,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "readAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "customer_activity_logs_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "refresh_tokens" (
+    "id" BIGSERIAL NOT NULL,
+    "token" VARCHAR(512) NOT NULL,
+    "customerId" BIGINT,
+    "adminId" BIGINT,
+    "isRevoked" BOOLEAN NOT NULL DEFAULT false,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "refresh_tokens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -303,6 +355,12 @@ CREATE INDEX "customers_email_idx" ON "customers"("email");
 CREATE INDEX "customers_slug_idx" ON "customers"("slug");
 
 -- CreateIndex
+CREATE INDEX "customer_activity_logs_customerId_idx" ON "customer_activity_logs"("customerId");
+
+-- CreateIndex
+CREATE INDEX "customer_activity_logs_createdAt_idx" ON "customer_activity_logs"("createdAt");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "collections_name_key" ON "collections"("name");
 
 -- CreateIndex
@@ -321,10 +379,19 @@ CREATE UNIQUE INDEX "products_slug_key" ON "products"("slug");
 CREATE INDEX "products_slug_idx" ON "products"("slug");
 
 -- CreateIndex
-CREATE INDEX "products_collectionId_idx" ON "products"("collectionId");
+CREATE INDEX "products_name_idx" ON "products"("name");
 
 -- CreateIndex
 CREATE INDEX "products_type_idx" ON "products"("type");
+
+-- CreateIndex
+CREATE INDEX "products_collectionId_isActive_idx" ON "products"("collectionId", "isActive");
+
+-- CreateIndex
+CREATE INDEX "products_collectionId_basePrice_idx" ON "products"("collectionId", "basePrice");
+
+-- CreateIndex
+CREATE INDEX "product_images_productId_role_idx" ON "product_images"("productId", "role");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "model_3d_productId_key" ON "model_3d"("productId");
@@ -340,6 +407,9 @@ CREATE UNIQUE INDEX "tools_productId_key" ON "tools"("productId");
 
 -- CreateIndex
 CREATE INDEX "orders_customerId_idx" ON "orders"("customerId");
+
+-- CreateIndex
+CREATE INDEX "orders_assignedAdminId_idx" ON "orders"("assignedAdminId");
 
 -- CreateIndex
 CREATE INDEX "order_items_orderId_idx" ON "order_items"("orderId");
@@ -396,16 +466,40 @@ CREATE INDEX "chat_messages_chatRoomId_idx" ON "chat_messages"("chatRoomId");
 CREATE INDEX "chat_messages_createdAt_idx" ON "chat_messages"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "customer_activity_logs_customerId_idx" ON "customer_activity_logs"("customerId");
+CREATE INDEX "notifications_recipientId_idx" ON "notifications"("recipientId");
 
 -- CreateIndex
-CREATE INDEX "customer_activity_logs_createdAt_idx" ON "customer_activity_logs"("createdAt");
+CREATE INDEX "notifications_recipientType_idx" ON "notifications"("recipientType");
+
+-- CreateIndex
+CREATE INDEX "notifications_createdAt_idx" ON "notifications"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "notifications_isRead_idx" ON "notifications"("isRead");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "refresh_tokens_token_key" ON "refresh_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_token_idx" ON "refresh_tokens"("token");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_customerId_idx" ON "refresh_tokens"("customerId");
+
+-- CreateIndex
+CREATE INDEX "refresh_tokens_adminId_idx" ON "refresh_tokens"("adminId");
+
+-- AddForeignKey
+ALTER TABLE "customer_activity_logs" ADD CONSTRAINT "customer_activity_logs_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "collections"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "products" ADD CONSTRAINT "products_discountCampainId_fkey" FOREIGN KEY ("discountCampainId") REFERENCES "discounts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "product_images" ADD CONSTRAINT "product_images_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "model_3d" ADD CONSTRAINT "model_3d_productId_fkey" FOREIGN KEY ("productId") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -418,6 +512,9 @@ ALTER TABLE "tools" ADD CONSTRAINT "tools_productId_fkey" FOREIGN KEY ("productI
 
 -- AddForeignKey
 ALTER TABLE "orders" ADD CONSTRAINT "orders_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "orders" ADD CONSTRAINT "orders_assignedAdminId_fkey" FOREIGN KEY ("assignedAdminId") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -453,4 +550,7 @@ ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_adminId_fkey" FOREIGN 
 ALTER TABLE "chat_messages" ADD CONSTRAINT "chat_messages_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "customer_activity_logs" ADD CONSTRAINT "customer_activity_logs_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admin_users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

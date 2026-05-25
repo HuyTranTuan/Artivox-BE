@@ -1,0 +1,116 @@
+// ─── Catalog ─────────────────────────────────────────
+
+model Collection {
+  id          BigInt    @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  isActive    Boolean   @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  products Product[]
+
+  @@index([slug])
+  @@map("collections")
+}
+
+model Product {
+  id                BigInt      @id @default(autoincrement())
+  name              String      @unique
+  slug              String      @unique
+  description       String?
+  type              ProductType
+  collectionId      BigInt?
+  discountCampainId BigInt?
+  isActive          Boolean     @default(true)
+
+  stock           Int     @default(0)
+  basePrice       Float
+  discountedPrice Float?
+  ratingAvg       Float   @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  model3D  Model3D?
+  material Material?
+  tool     Tool?
+  images   ProductImage[]
+
+  orderItems      OrderItem[]
+  collection      Collection? @relation(fields: [collectionId], references: [id])
+  discountCampain Discount?   @relation(fields: [discountCampainId], references: [id])
+
+  // [TỐI ƯU] Các Index đã được cập nhật cho tìm kiếm và lọc dữ liệu
+  @@index([slug])
+  @@index([name])                     // [TỐI ƯU] Index hỗ trợ tính năng search sản phẩm theo tên
+  @@index([type])
+  @@index([collectionId, isActive])   // [TỐI ƯU] Composite Index: Lọc danh sách sản phẩm hiển thị trong Collection
+  @@index([collectionId, basePrice])  // [TỐI ƯU] Composite Index: Phục vụ tính năng lọc theo khoảng giá trong một Collection
+  
+  @@map("products")
+}
+
+model ProductImage {
+  id        BigInt    @id @default(autoincrement())
+  productId BigInt
+  url       String    
+  altText   String?   
+  role      ImageRole @default(GALLERY)
+  sortOrder Int       @default(0) 
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  // [TỐI ƯU] Composite Index thay thế cho Index đơn: Lọc cực nhanh ảnh Before/After khi truy vấn List Product
+  @@index([productId, role])
+  
+  @@map("product_images")
+}
+
+model Model3D {
+  id             BigInt   @id @default(autoincrement())
+  productId      BigInt   @unique
+  previewFileUrl String   
+  sourceFileUrl  String   
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("model_3d")
+}
+
+model Material {
+  id        BigInt       @id @default(autoincrement())
+  productId BigInt       @unique
+  type      MaterialType
+  color     String?
+  unit      MaterialUnit
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("materials")
+}
+
+model Tool {
+  id             BigInt   @id @default(autoincrement())
+  slug           String   @unique
+  productId      BigInt   @unique
+  specifications String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("tools")
+}

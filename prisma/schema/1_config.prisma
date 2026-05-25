@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../generated/"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────
+
+enum AdminRole {
+  ADMIN
+  STAFF
+}
+
+enum ProductType {
+  MODEL
+  MATERIAL
+  TOOL
+}
+
+enum MaterialType {
+  FDM
+  RESIN
+}
+
+enum MaterialUnit {
+  GRAM
+  PIECE
+  ROLL
+  BOX
+}
+
+enum OrderStatus {
+  COMPLETED
+  CANCELED
+  PENDING
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  REFUNDED
+  REFUNDING
+  FAILED
+}
+
+enum PaymentMethod {
+  COD
+  BANK_TRANSFER
+  ZALOPAY
+}
+
+enum DiscountType {
+  FIXED
+  PERCENT
+}
+
+enum ChatMessageSender {
+  STAFF
+  CUSTOMER
+}
+
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_APPROVED
+  ARTICLE_CREATED
+  ARTICLE_APPROVED
+  CHAT_MESSAGE
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum ImageRole {
+  THUMBNAIL_BEFORE 
+  THUMBNAIL_AFTER  
+  GALLERY          
+}

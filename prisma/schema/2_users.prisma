@@ -1,0 +1,72 @@
+// ─── Admin Users (Staff / Admins) ─────────
+
+model AdminUser {
+  id         BigInt    @id @default(autoincrement())
+  email      String    @unique @db.VarChar(50)
+  password   String    @db.VarChar(100)
+  fullName   String    @db.VarChar(100)
+  phone      String    @unique @db.VarChar(15)
+  role       AdminRole @default(STAFF)
+  permission String    @default("{create:false,update:false,del:false}")
+  createdAt  DateTime  @default(now()) @db.Timestamp
+  updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamp
+  deletedAt  DateTime? @db.Timestamp
+
+  articles     Article[]
+  chatRooms    ChatRoom[]
+  chatMessages ChatMessage[]
+  orders       Order[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("admin_users")
+}
+
+// ─── Users (Customers) ────────────────────
+
+model Customer {
+  id                      BigInt    @id @default(autoincrement())
+  email                   String    @unique
+  password                String
+  fullName                String?
+  phone                   String?
+  address                 String?
+  dateOfBirth             DateTime?
+  gender                  Gender?
+  slug                    String    @unique
+  verifiedAt              DateTime?
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @default(now()) @updatedAt
+  deletedAt               DateTime?
+
+  orders       Order[]
+  cartItems    CartItem[]
+  chatRooms    ChatRoom[]
+  chatMessages ChatMessage[]
+  activityLogs CustomerActivityLog[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+  @@index([slug])
+  @@map("customers")
+}
+
+// ─── Activity Logs ───────────────────────────────────
+
+model CustomerActivityLog {
+  id         BigInt   @id @default(autoincrement())
+  customerId BigInt
+  action     String
+  metadata   Json?
+  
+  createdAt DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("customer_activity_logs")
+}

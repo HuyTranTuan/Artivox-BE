@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
 
-const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || "1MemugtIg_GpqsVz2YePPmAfVX_tBLCRX";
+const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 const BACKUP_DIR = path.join(__dirname, "../../backups");
 
 function getDriveClient() {

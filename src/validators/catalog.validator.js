@@ -32,9 +32,8 @@ const createModelSchema = z.object({
   description: z.string.min(20).max(255).require(),
   type: z.enum(["MODEL", "MATERIAL", "TOOL"]).optional().default("MODEL"),
   collection: z.enum(["MODEL", "MATERIAL", "TOOL"]).optional().default("MODEL"),
-  basePrice:
-
-
+  basePrice: z.coerce.number().positive().default(0).optional(),
+  stock: z.coerce.number().int().positive().default(0).optional(),
 })
 
-module.exports { productQuerySchema, modelQuerySchema, materialQuerySchema, toolQuerySchema}
+module.exports = { productQuerySchema, modelQuerySchema, materialQuerySchema, toolQuerySchema }

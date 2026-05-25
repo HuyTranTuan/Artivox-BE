@@ -1,0 +1,59 @@
+// ─── Orders & Cart ───────────────────────────────────
+
+model Order {
+  id              BigInt        @id @default(autoincrement())
+  customerId      BigInt
+  assignedAdminId BigInt?
+  shippingAddress String
+  note            String?       @db.VarChar(255)
+  shippingFee     Float         @default(0.00)
+  discountAmount  Float         @default(0.00)
+  totalAmount     Float
+  paidAt          DateTime?
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(BANK_TRANSFER)
+  paymentStatus   PaymentStatus @default(PENDING)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  assignedAdmin AdminUser?      @relation(fields: [assignedAdminId], references: [id])
+  items         OrderItem[]
+  discountOrders DiscountOrder[]
+
+  @@index([customerId])
+  @@index([assignedAdminId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        BigInt @id @default(autoincrement())
+  orderId   BigInt
+  productId BigInt
+  quantity  Int    @default(1)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model CartItem {
+  id         BigInt   @id @default(autoincrement())
+  customerId BigInt
+  productId  BigInt
+  quantity   Int      @default(1)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+  @@index([customerId])
+  @@map("cart_items")
+}

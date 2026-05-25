@@ -1,0 +1,103 @@
+// ─── Articles (Multi-language) ───────────────────────
+
+model Article {
+  id          BigInt    @id @default(autoincrement())
+  slug        String    @unique
+  authorId    BigInt
+  coverImage  String?
+  publishedAt DateTime?
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  deletedAt DateTime?
+
+  author       AdminUser            @relation(fields: [authorId], references: [id])
+  translations ArticleTranslation[]
+
+  @@index([slug])
+  @@index([authorId])
+  @@map("articles")
+}
+
+model ArticleTranslation {
+  id        BigInt   @id @default(autoincrement())
+  articleId BigInt
+  locale    String   @db.VarChar(10)
+  title     String
+  content   String
+  summary   String?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, locale])
+  @@map("article_translations")
+}
+
+// ─── Chat System ─────────────────────────────────────
+
+model ChatRoom {
+  id         BigInt   @id @default(autoincrement())
+  adminId    BigInt
+  customerId BigInt
+  isActive   Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  admin    AdminUser     @relation(fields: [adminId], references: [id])
+  customer Customer      @relation(fields: [customerId], references: [id])
+  messages ChatMessage[]
+
+  @@unique([adminId, customerId])
+  @@index([adminId])
+  @@index([customerId])
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id         BigInt            @id @default(autoincrement())
+  chatRoomId BigInt
+  senderType ChatMessageSender
+  adminId    BigInt?
+  customerId BigInt?
+  content    String
+  fileUrl    String?
+  fileType   String?
+  isRead     Boolean           @default(false)
+  
+  createdAt DateTime @default(now())
+
+  chatRoom ChatRoom   @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  admin    AdminUser? @relation(fields: [adminId], references: [id])
+  customer Customer?  @relation(fields: [customerId], references: [id])
+
+  @@index([chatRoomId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// ─── Notifications ───────────────────────────────────
+
+model Notification {
+  id            BigInt           @id @default(autoincrement())
+  type          NotificationType
+  recipientId   BigInt
+  recipientType String
+  title         String
+  message       String
+  metadata      Json?
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([recipientId])
+  @@index([recipientType])
+  @@index([createdAt])
+  @@index([isRead])
+  @@map("notifications")
+}
