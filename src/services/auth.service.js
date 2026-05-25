@@ -5,8 +5,13 @@ const { prisma } = require("@libs/prisma");
 const { jwtSecret, jwtRefreshSecret, accessTokenTTL, refreshTokenTTL } = require("@config/auth");
 const slugify = require("@/utils/slugify");
 const { HTTP_CODES } = require("@/config/constants");
+const BAD_REQUEST = HTTP_CODES.BAD_REQUESTED;
 const AppError = require("@/utils/AppError");
 const { sendVerificationEmail } = require("@services/mail.service");
+
+function normalizeEmail(email) {
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
 
 function generateTokens(payload) {
   const accessToken = jwt.sign(payload, jwtSecret, {
@@ -18,10 +23,21 @@ function generateTokens(payload) {
   return { accessToken, refreshToken, expiresIn: accessTokenTTL };
 }
 
+function extractRefreshToken(req = {}) {
+  const bodyToken = req?.body?.refreshToken;
+  const cookieToken = req?.cookies?.refreshToken;
+  const headerToken = req?.headers?.["x-refresh-token"];
+  const authHeader = req?.headers?.authorization;
+  const bearerToken = authHeader && authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+
+  return bodyToken || cookieToken || headerToken || bearerToken || null;
+}
+
 // Admin login
 async function adminLogin(email, password) {
+  const normalizedEmail = normalizeEmail(email);
   const user = await prisma.adminUser.findFirst({
-    where: { email, deletedAt: null },
+    where: { email: normalizedEmail, deletedAt: null },
   });
   if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
   if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
@@ -50,18 +66,19 @@ async function adminLogin(email, password) {
 
 // Customer register
 async function customerRegister({ email, password, fullName, phone, address, gender }) {
-  const existing = await prisma.customer.findFirst({ where: { email } });
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await prisma.customer.findFirst({ where: { email: normalizedEmail } });
   if (existing) throw new AppError("Email already registered", HTTP_CODES.CONFLICT);
 
   const hashedPassword = await bcrypt.hash(password, 12);
-  const slug = slugify(fullName || email.split("@")[0]) + "-" + Date.now().toString(36);
+  const slug = slugify(fullName || normalizedEmail.split("@")[0]) + "-" + Date.now().toString(36);
 
   // Generate verification token (random hex, expires 1h)
   const verificationToken = crypto.randomBytes(32).toString("hex");
   const verificationTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
 
   const user = await prisma.customer.create({
-    data: { email, password: hashedPassword, fullName, phone, address, gender, slug, verificationToken, verificationTokenExpiry },
+    data: { email: normalizedEmail, password: hashedPassword, fullName, phone, address, gender, slug, verificationToken, verificationTokenExpiry },
   });
 
   const tokens = generateTokens({
@@ -71,7 +88,7 @@ async function customerRegister({ email, password, fullName, phone, address, gen
   });
 
   // Send verification email (non-blocking)
-  sendVerificationEmail(email, verificationToken).catch((err) =>
+  sendVerificationEmail(normalizedEmail, verificationToken).catch((err) =>
     console.error("[Mail] Failed to send verification email:", err.message)
   );
 
@@ -91,16 +108,16 @@ async function customerRegister({ email, password, fullName, phone, address, gen
 
 // Verify email by token
 async function verifyEmail(token) {
-  if (!token) throw new AppError("Token required", HTTP_CODES.BAD_REQUEST);
+  if (!token) throw new AppError("Token required", BAD_REQUEST);
 
   const customer = await prisma.customer.findFirst({
     where: { verificationToken: token, deletedAt: null },
   });
 
-  if (!customer) throw new AppError("Invalid or expired token", HTTP_CODES.BAD_REQUEST);
+  if (!customer) throw new AppError("Invalid or expired token", BAD_REQUEST);
   if (customer.verifiedAt) return { message: "Email already verified" };
   if (customer.verificationTokenExpiry < new Date())
-    throw new AppError("Token expired", HTTP_CODES.BAD_REQUEST);
+    throw new AppError("Token expired", BAD_REQUEST);
 
   await prisma.customer.update({
     where: { id: customer.id },
@@ -112,8 +129,9 @@ async function verifyEmail(token) {
 
 // Customer login
 async function customerLogin(email, password) {
+  const normalizedEmail = normalizeEmail(email);
   const user = await prisma.customer.findFirst({
-    where: { email, deletedAt: null },
+    where: { email: normalizedEmail, deletedAt: null },
   });
   if (!user) throw new AppError("Invalid credentials", HTTP_CODES.UNAUTHORIZED);
   if (user.deletedAt) throw new AppError("Account deactivated", HTTP_CODES.FORBIDDEN);
@@ -146,6 +164,10 @@ async function customerLogin(email, password) {
 
 // Refresh token
 async function refreshToken(token) {
+  if (!token) {
+    throw new AppError("Refresh token required", HTTP_CODES.BAD_REQUESTED);
+  }
+
   try {
     const decoded = jwt.verify(token, jwtRefreshSecret);
     const { iat, exp, ...payload } = decoded;
@@ -153,20 +175,32 @@ async function refreshToken(token) {
     // Verify user still exists
     if (payload.type === "admin") {
       const user = await prisma.adminUser.findFirst({
-        where: { email: payload.email, deletedAt: null },
+        where: { id: payload.id, email: normalizeEmail(payload.email), deletedAt: null },
       });
       if (!user) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
+      return generateTokens({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        type: "admin",
+      });
     } else {
       const user = await prisma.customer.findFirst({
-        where: { email: payload.email, deletedAt: null },
+        where: { id: payload.id, email: normalizeEmail(payload.email), deletedAt: null },
       });
       if (!user) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
+      return generateTokens({
+        id: user.id,
+        email: user.email,
+        type: "customer",
+      });
     }
-
-    return generateTokens(payload);
   } catch (error) {
-    if (error.isOperational) throw new AppError("Failed", HTTP_CODES.INTERNAL_SERVER_ERROR);
-    throw new AppError("Invalid refreshtoken", HTTP_CODES.UNAUTHORIZED);
+    if (error instanceof AppError) throw error;
+    if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError" || error.name === "NotBeforeError") {
+      throw new AppError("Invalid refresh token", HTTP_CODES.UNAUTHORIZED);
+    }
+    throw new AppError("Failed to refresh token", HTTP_CODES.INTERNAL_SERVER_ERROR);
   }
 }
 
@@ -260,8 +294,9 @@ async function updateCustomerAccount(customerId, { fullName, email, phone, addre
 }
 
 async function resendVerifyEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
   const customer = await prisma.customer.findFirst({
-    where: { email, deletedAt: null },
+    where: { email: normalizedEmail, deletedAt: null },
   });
 
   if (!customer) throw new AppError("User not found", HTTP_CODES.NOT_FOUND);
@@ -275,7 +310,7 @@ async function resendVerifyEmail(email) {
     data: { verificationToken, verificationTokenExpiry },
   });
 
-  sendVerificationEmail(email, verificationToken).catch((err) =>
+  sendVerificationEmail(normalizedEmail, verificationToken).catch((err) =>
     console.error("[Mail] Failed to resend verification email:", err.message)
   );
 
@@ -287,6 +322,7 @@ module.exports = {
   customerRegister,
   customerLogin,
   refreshToken,
+  extractRefreshToken,
   logout,
   updateAdminAccount,
   updateCustomerAccount,

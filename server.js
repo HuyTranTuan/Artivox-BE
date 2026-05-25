@@ -38,6 +38,7 @@ const port = process.env.APP_PORT || 3000;
 app.use(cors(corsConfig));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(responseMiddleware);
 
 //////////// REST Routes ////////////

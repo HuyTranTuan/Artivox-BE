@@ -25,7 +25,7 @@ router.patch("/admin/account", authMiddleware, authController.updateAdminAccount
 router.patch("/customer/account", authMiddleware, authController.updateCustomerAccount);
 
 // Verify email
-router.get("/verify-email", authController.verifyEmail);
+router.post("/verify-email", authController.verifyEmail);
 router.post("/resend-verify-email", authController.resendVerifyEmail);
 
 module.exports = router;

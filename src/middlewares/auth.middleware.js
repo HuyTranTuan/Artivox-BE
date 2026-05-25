@@ -21,8 +21,8 @@ const authMiddleware = async (req, res, next) => {
       return res.error("Invalid token", HTTP_CODES.UNAUTHORIZED);
     }
     if (error.name === "TokenExpiredError") {
-      // Try to refresh the token using refresh token from header
-      const refreshToken = req.headers["x-refresh-token"];
+      // Try to refresh the token using refresh token from body/header/cookie
+      const refreshToken = authService.extractRefreshToken(req);
       if (!refreshToken) {
         return res.error("Token expired", HTTP_CODES.UNAUTHORIZED);
       }

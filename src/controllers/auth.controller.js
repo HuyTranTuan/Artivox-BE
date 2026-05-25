@@ -1,32 +1,61 @@
 const authService = require("@services/auth.service");
 const catchAsync = require("@utils/catchAsync");
+const isProduction = require("@utils/isProduction");
+
+function writeRefreshTokenCookie(res, refreshToken) {
+  if (!refreshToken) return;
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: isProduction(),
+    sameSite: isProduction() ? "none" : "lax",
+    path: "/",
+  });
+}
+
+function sendAuthResponse(res, payload, message, statusCode = 200) {
+  writeRefreshTokenCookie(res, payload.refreshToken);
+
+  return res.status(statusCode).json({
+    status: "success",
+    message,
+    ...payload,
+    data: payload,
+  });
+}
 
 /////////// Admin Auth ///////////////
 const adminLogin = catchAsync(async (req, res) => {
   const { email, password } = req.body;
   const data = await authService.adminLogin(email, password);
-  return res.success(data, "Login successful");
+  return sendAuthResponse(res, data, "Login successful");
 });
 
 ///////////// User Auth //////////////
 const customerRegister = catchAsync(async (req, res) => {
   const data = await authService.customerRegister(req.body);
-  return res.success(data, "Registration successful", 201);
+  return sendAuthResponse(res, data, "Registration successful", 201);
 });
 
 const customerLogin = catchAsync(async (req, res) => {
   const data = await authService.customerLogin(req.body.email, req.body.password);
-  return res.success(data, "Login successful");
+  return sendAuthResponse(res, data, "Login successful");
 });
 
 const refreshToken = catchAsync(async (req, res) => {
-  const { refreshToken } = req.body;
-  const data = await authService.refreshToken(refreshToken);
-  return res.success(data, "Token refreshed");
+  const token = authService.extractRefreshToken(req);
+  const data = await authService.refreshToken(token);
+  return sendAuthResponse(res, data, "Token refreshed");
 });
 
 // Logout - works for both admin and customer
 const logout = catchAsync(async (req, res) => {
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: isProduction(),
+    sameSite: isProduction() ? "none" : "lax",
+    path: "/",
+  });
   const data = await authService.logout(req.user.id, req.user.type);
   return res.success(data, "Logged out successfully");
 });
@@ -45,7 +74,7 @@ const updateCustomerAccount = catchAsync(async (req, res) => {
 
 // Verify email
 const verifyEmail = catchAsync(async (req, res) => {
-  const { token } = req.query;
+  const { token } = req.body;
   const data = await authService.verifyEmail(token);
   return res.success(data, data.message);
 });
