@@ -25,4 +25,15 @@ const getModelBySlug = catchAsync(async (req, res) => {
   return res.success(data, "Model detail fetched");
 });
 
-module.exports = { getModels, getModelBySlug };
+const createModel = catchAsync(async (req, res) => {
+  const data = await modelsService.createModel(req.body, req.files);
+  return res.success(data, "Model created");
+});
+
+const updateModel = catchAsync(async (req, res) => {
+  const data = await modelsService.updateModel(req.params.slug, req.body, req.files);
+  if (!data) return res.notFound();
+  return res.success(data, "Model updated");
+});
+
+module.exports = { getModels, getModelBySlug, createModel, updateModel };

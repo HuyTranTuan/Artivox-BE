@@ -40,13 +40,26 @@ const sendMessage = catchAsync(async (req, res) => {
   const io = req.app.get("io");
   if (io) {
     const roomName = isAdmin ? String(data.customerId) : String(req.user.id);
-    io.to(`chat:${roomName}`).emit("chat:message", {
+    const serialized = {
       ...data,
       id: data.id?.toString(),
       chatRoomId: data.chatRoomId?.toString(),
       adminId: data.adminId?.toString(),
       customerId: data.customerId?.toString(),
-    });
+    };
+    io.of("/chat").to(`chat:${roomName}`).emit("chat:message", serialized);
+
+    // When customer sends → notify admin/staff via /notifications namespace
+    if (!isAdmin) {
+      io.of("/notifications").to("admin_room").emit("chat_notification", {
+        type: "CHAT_MESSAGE",
+        title: "New customer message",
+        message: content?.substring(0, 80) || "Sent a file",
+        chatRoomId: data.chatRoomId?.toString(),
+        customerId: String(req.user.id),
+        createdAt: new Date().toISOString(),
+      });
+    }
   }
 
   return res.success(data, "Message sent", 201);

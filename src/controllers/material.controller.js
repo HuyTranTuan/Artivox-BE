@@ -25,4 +25,15 @@ const getMaterialBySlug = catchAsync(async (req, res) => {
   return res.success(data, "Material detail fetched");
 });
 
-module.exports = { getMaterials, getMaterialBySlug };
+const createMaterial = catchAsync(async (req, res) => {
+  const data = await materialService.createMaterial(req.body, req.files);
+  return res.success(data, "Material created");
+});
+
+const updateMaterial = catchAsync(async (req, res) => {
+  const data = await materialService.updateMaterial(req.params.slug, req.body, req.files);
+  if (!data) return res.notFound();
+  return res.success(data, "Material updated");
+});
+
+module.exports = { getMaterials, getMaterialBySlug, createMaterial, updateMaterial };

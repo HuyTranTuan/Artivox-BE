@@ -1,6 +1,7 @@
 const { prisma } = require("@libs/prisma");
+const { uploadCollectionImage, getSecureImageUrl } = require("@services/productImage.service");
 
-// Fetch all active collections
+// Fetch all active collections (public)
 async function getCollections(query = {}) {
   const where = {
     deletedAt: null,
@@ -24,7 +25,38 @@ async function getCollections(query = {}) {
   ]);
 
   return {
-    items,
+    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image) })),
+    total,
+    limit: query.limit,
+    skip: query.skip,
+  };
+}
+
+// Fetch all collections (admin, regardless of isActive)
+async function getCollectionsAdmin(query = {}) {
+  const where = {
+    deletedAt: null,
+    ...(query.search && {
+      OR: [
+        { name: { contains: query.search, mode: "insensitive" } },
+        { slug: { contains: query.search, mode: "insensitive" } },
+      ],
+    }),
+  };
+
+  const [items, total] = await prisma.$transaction([
+    prisma.collection.findMany({
+      where,
+      include: { _count: { select: { products: true } } },
+      orderBy: { createdAt: "desc" },
+      take: query.limit,
+      skip: query.skip,
+    }),
+    prisma.collection.count({ where }),
+  ]);
+
+  return {
+    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image) })),
     total,
     limit: query.limit,
     skip: query.skip,
@@ -33,15 +65,93 @@ async function getCollections(query = {}) {
 
 // Fetch collection by slug with products
 async function getCollectionBySlug(slug) {
-  return prisma.collection.findFirst({
+  const collection = await prisma.collection.findFirst({
     where: { slug, deletedAt: null },
     include: {
       products: {
         where: { deletedAt: null },
-        include: { model3D: true, material: true, tool: true },
+        include: { model3D: true, material: true, tool: true, images: true },
       },
+    },
+  });
+  if (!collection) return null;
+  return {
+    ...collection,
+    image: getSecureImageUrl(collection.image),
+    products: collection.products.map((p) => ({
+      ...p,
+      images: p.images?.map((img) => ({ ...img, url: getSecureImageUrl(img.url) })),
+    })),
+  };
+}
+
+// Create collection
+async function createCollection(data, files) {
+  let imageUrl = null;
+  if (files?.image?.[0]) {
+    imageUrl = await uploadCollectionImage(data.slug, files.image[0]);
+  }
+
+  return prisma.collection.create({
+    data: {
+      name: data.name,
+      slug: data.slug,
+      description: data.description || null,
+      image: imageUrl,
+      isActive: data.isActive !== undefined ? data.isActive === "true" || data.isActive === true : true,
     },
   });
 }
 
-module.exports = { getCollections, getCollectionBySlug };
+// Update collection by slug
+async function updateCollectionBySlug(slug, data, files) {
+  const existing = await prisma.collection.findFirst({ where: { slug, deletedAt: null } });
+  if (!existing) return null;
+
+  let imageUrl = existing.image;
+  if (files?.image?.[0]) {
+    imageUrl = await uploadCollectionImage(data.slug || slug, files.image[0]);
+  }
+
+  return prisma.collection.update({
+    where: { id: existing.id },
+    data: {
+      ...(data.name && { name: data.name }),
+      ...(data.slug && { slug: data.slug }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(imageUrl !== existing.image && { image: imageUrl }),
+      ...(data.isActive !== undefined && { isActive: data.isActive === "true" || data.isActive === true }),
+    },
+  });
+}
+
+// Add product to collection by product slug
+async function addProductToCollection(collectionId, productSlug) {
+  const product = await prisma.product.findFirst({
+    where: { slug: productSlug, deletedAt: null },
+  });
+  if (!product) return null;
+
+  return prisma.product.update({
+    where: { id: product.id },
+    data: { collectionId: BigInt(collectionId) },
+  });
+}
+
+// Remove product from collection
+async function removeProductFromCollection(productId) {
+  return prisma.product.update({
+    where: { id: BigInt(productId) },
+    data: { collectionId: null },
+  });
+}
+
+module.exports = {
+  getCollections,
+  getCollectionsAdmin,
+  getCollectionBySlug,
+  createCollection,
+  updateCollectionBySlug,
+  addProductToCollection,
+  removeProductFromCollection,
+};

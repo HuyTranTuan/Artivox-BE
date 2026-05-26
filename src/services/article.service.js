@@ -1,12 +1,6 @@
 const { prisma } = require("@libs/prisma");
 const notificationService = require("@services/notification.service");
-
-function slugify(str) {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+const slugify = require("@utils/slugify")
 
 // Create article
 async function createArticle(authorId, { slug, coverImage, translations }) {

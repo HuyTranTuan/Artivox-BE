@@ -25,4 +25,15 @@ const getToolBySlug = catchAsync(async (req, res) => {
   return res.success(data, "Tool detail fetched");
 });
 
-module.exports = { getTools, getToolBySlug };
+const createTool = catchAsync(async (req, res) => {
+  const data = await toolService.createTool(req.body, req.files);
+  return res.success(data, "Tool created");
+});
+
+const updateTool = catchAsync(async (req, res) => {
+  const data = await toolService.updateTool(req.params.slug, req.body, req.files);
+  if (!data) return res.notFound();
+  return res.success(data, "Tool updated");
+});
+
+module.exports = { getTools, getToolBySlug, createTool, updateTool };

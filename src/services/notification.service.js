@@ -81,6 +81,20 @@ async function deleteNotification(notificationId) {
   });
 }
 
+// Notify Staff about New Order via Socket
+async function notifyStaffOrderCreated(orderId, io) {
+  if (io) {
+    io.to("admin_room").emit("new_order", { orderId, message: `New order #${orderId} created.` });
+  }
+}
+
+// Notify Staff about New Message via Socket
+async function notifyStaffNewMessage(chatRoomId, message, io) {
+  if (io) {
+    io.to("admin_room").emit("new_message", { chatRoomId, message });
+  }
+}
+
 module.exports = {
   createNotification,
   getNotifications,
@@ -89,4 +103,6 @@ module.exports = {
   markMultipleAsRead,
   getNotificationById,
   deleteNotification,
+  notifyStaffOrderCreated,
+  notifyStaffNewMessage,
 };
