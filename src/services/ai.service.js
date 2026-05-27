@@ -47,6 +47,8 @@ function getDefaultResponse(userMessage) {
   return "I'm here to help with any questions about Artivox products and services. What can I assist you with?";
 }
 
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function generateAIResponse(userMessage, conversationContext = []) {
   if (!API_KEY) return getDefaultResponse(userMessage);
 
@@ -69,6 +71,89 @@ async function generateAIResponse(userMessage, conversationContext = []) {
   }
 }
 
+/**
+ * Async generator that yields tokens one at a time.
+ * - No API key → simulates streaming with 40ms delay per word
+ * - With API key → streams from OpenRouter, yielding each delta token
+ */
+async function* streamAITokens(userMessage, conversationContext = []) {
+  if (!API_KEY) {
+    const fallbackText = getDefaultResponse(userMessage);
+    const words = fallbackText.split(/(\s+)/);
+    for (const word of words) {
+      if (word) {
+        yield word;
+        await delay(40);
+      }
+    }
+    return;
+  }
+
+  try {
+    const websiteContext = await buildWebsiteContext();
+    const messages = [
+      buildSystemMessage(websiteContext),
+      ...conversationContext,
+      { role: "user", content: userMessage },
+    ];
+
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      { model: MODEL, messages, temperature: 0.7, max_tokens: 500, top_p: 0.9, stream: true },
+      {
+        headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+        responseType: "stream",
+        timeout: 30000,
+      },
+    );
+
+    let buffer = "";
+    // Use for-await to consume the axios response stream chunk by chunk
+    for await (const rawChunk of response.data) {
+      buffer += rawChunk.toString("utf8");
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === "data: [DONE]") continue;
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const parsed = JSON.parse(trimmed.slice(6));
+            const token = parsed.choices?.[0]?.delta?.content;
+            if (token) yield token;
+          } catch {
+            // partial JSON — skip
+          }
+        }
+      }
+    }
+
+    // Flush leftover buffer
+    if (buffer) {
+      const trimmed = buffer.trim();
+      if (trimmed.startsWith("data: ") && trimmed !== "data: [DONE]") {
+        try {
+          const parsed = JSON.parse(trimmed.slice(6));
+          const token = parsed.choices?.[0]?.delta?.content;
+          if (token) yield token;
+        } catch {}
+      }
+    }
+  } catch (error) {
+    console.error("AI Stream API Error:", error.message);
+    // Fallback: yield the default response word by word
+    const fallbackText = getDefaultResponse(userMessage);
+    const words = fallbackText.split(/(\s+)/);
+    for (const word of words) {
+      if (word) {
+        yield word;
+        await delay(40);
+      }
+    }
+  }
+}
+
 function buildConversationContext(messages = [], maxMessages = 5) {
   if (!Array.isArray(messages) || messages.length === 0) return [];
   return messages
@@ -77,4 +162,4 @@ function buildConversationContext(messages = [], maxMessages = 5) {
     .map((msg) => ({ role: msg.senderType === "ADMIN" ? "assistant" : "user", content: msg.content }));
 }
 
-module.exports = { generateAIResponse, buildConversationContext };
+module.exports = { generateAIResponse, streamAITokens, buildConversationContext };

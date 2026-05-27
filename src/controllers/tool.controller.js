@@ -36,4 +36,10 @@ const updateTool = catchAsync(async (req, res) => {
   return res.success(data, "Tool updated");
 });
 
-module.exports = { getTools, getToolBySlug, createTool, updateTool };
+const deleteTool = catchAsync(async (req, res) => {
+  const data = await toolService.deleteTool(req.params.slug);
+  if (!data) return res.notFound();
+  return res.success(null, "Tool deleted successfully");
+});
+
+module.exports = { getTools, getToolBySlug, createTool, updateTool, deleteTool };

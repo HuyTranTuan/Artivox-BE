@@ -119,9 +119,22 @@ async function updateMaterial(slug, data, files) {
   return getMaterialBySlug(product.slug);
 }
 
+async function deleteMaterial(slug) {
+  const existing = await prisma.product.findFirst({
+    where: { slug, deletedAt: null, type: "MATERIAL" }
+  });
+  if (!existing) return null;
+
+  return prisma.product.update({
+    where: { id: existing.id },
+    data: { deletedAt: new Date() }
+  });
+}
+
 module.exports = {
   getMaterials,
   getMaterialBySlug,
   createMaterial,
-  updateMaterial
+  updateMaterial,
+  deleteMaterial
 };

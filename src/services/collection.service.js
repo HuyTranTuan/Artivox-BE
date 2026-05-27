@@ -146,6 +146,16 @@ async function removeProductFromCollection(productId) {
   });
 }
 
+async function deleteCollectionBySlug(slug) {
+  const existing = await prisma.collection.findFirst({ where: { slug, deletedAt: null } });
+  if (!existing) return null;
+
+  return prisma.collection.update({
+    where: { id: existing.id },
+    data: { deletedAt: new Date() },
+  });
+}
+
 module.exports = {
   getCollections,
   getCollectionsAdmin,
@@ -154,4 +164,6 @@ module.exports = {
   updateCollectionBySlug,
   addProductToCollection,
   removeProductFromCollection,
+  deleteCollectionBySlug,
 };
+

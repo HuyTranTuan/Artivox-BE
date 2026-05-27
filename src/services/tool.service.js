@@ -66,7 +66,7 @@ async function createTool(data, files) {
       tool: {
         create: {
           slug: data.slug,
-          specifications: data.specifications ? JSON.parse(data.specifications) : {},
+          specifications: data.specifications ? (typeof data.specifications === 'string' ? data.specifications : JSON.stringify(data.specifications)) : null,
         }
       }
     }
@@ -100,7 +100,7 @@ async function updateTool(slug, data, files) {
       tool: {
         update: {
           ...(data.slug !== undefined && { slug: data.slug }),
-          ...(data.specifications !== undefined && { specifications: data.specifications ? JSON.parse(data.specifications) : existing.tool.specifications }),
+          ...(data.specifications !== undefined && { specifications: data.specifications ? (typeof data.specifications === 'string' ? data.specifications : JSON.stringify(data.specifications)) : existing.tool.specifications }),
         }
       }
     }
@@ -113,9 +113,22 @@ async function updateTool(slug, data, files) {
   return getToolBySlug(product.slug);
 }
 
+async function deleteTool(slug) {
+  const existing = await prisma.product.findFirst({
+    where: { slug, deletedAt: null, type: "TOOL" }
+  });
+  if (!existing) return null;
+
+  return prisma.product.update({
+    where: { id: existing.id },
+    data: { deletedAt: new Date() }
+  });
+}
+
 module.exports = {
   getTools,
   getToolBySlug,
   createTool,
-  updateTool
+  updateTool,
+  deleteTool
 };

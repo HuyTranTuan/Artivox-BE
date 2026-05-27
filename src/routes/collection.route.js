@@ -14,6 +14,7 @@ router.use(authMiddleware, restrictTo("ADMIN", "STAFF"));
 router.get("/admin/all", collectionController.getCollectionsAdmin);
 router.post("/", uploadProductImages, collectionController.createCollection);
 router.put("/:slug", uploadProductImages, collectionController.updateCollection);
+router.delete("/:slug", collectionController.deleteCollection);
 router.post("/:id/products", collectionController.addProductToCollection);
 router.delete("/:id/products/:productId", collectionController.removeProductFromCollection);
 

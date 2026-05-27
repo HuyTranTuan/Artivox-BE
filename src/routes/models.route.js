@@ -11,5 +11,6 @@ router.get("/:slug", modelsController.getModelBySlug);
 router.use(authMiddleware, restrictTo("ADMIN", "STAFF"));
 router.post("/", uploadProductImages, modelsController.createModel);
 router.put("/:slug", uploadProductImages, modelsController.updateModel);
+router.delete("/:slug", modelsController.deleteModel);
 
 module.exports = router;

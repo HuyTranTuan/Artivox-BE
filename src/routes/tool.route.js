@@ -11,5 +11,6 @@ router.get("/:slug", toolController.getToolBySlug);
 router.use(authMiddleware, restrictTo("ADMIN", "STAFF"));
 router.post("/", uploadProductImages, toolController.createTool);
 router.put("/:slug", uploadProductImages, toolController.updateTool);
+router.delete("/:slug", toolController.deleteTool);
 
 module.exports = router;

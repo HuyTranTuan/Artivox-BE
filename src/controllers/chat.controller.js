@@ -72,12 +72,44 @@ const markAsRead = catchAsync(async (req, res) => {
   return res.success(null, "Marked as read");
 });
 
-// POST /chat/ai — standalone AI chat (no room)
-const aiChat = catchAsync(async (req, res) => {
+// POST /chat/ai — standalone AI chat (SSE streaming)
+// NOTE: Not wrapped in catchAsync — SSE must stay alive until stream ends.
+const aiChat = async (req, res, next) => {
   const { message, history } = req.body;
   if (!message?.trim()) return res.error("message required", 400);
-  const reply = await chatService.aiChat(message, history || []);
-  return res.success({ reply }, "AI response");
-});
+
+  // SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+
+  if (res.socket) res.socket.setNoDelay(true);
+  res.flushHeaders();
+
+  // Abort signal: stop the generator when the client disconnects
+  let aborted = false;
+  req.on("close", () => { aborted = true; });
+
+  try {
+    const tokenStream = chatService.aiChatStreamTokens(message, history || []);
+
+    for await (const token of tokenStream) {
+      if (aborted) break;
+      res.write(`data: ${JSON.stringify({ token })}\n\n`);
+    }
+
+    if (!aborted) {
+      res.write("data: [DONE]\n\n");
+    }
+  } catch (error) {
+    console.error("AI chat stream error:", error);
+    if (!res.writableEnded) {
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    }
+  } finally {
+    if (!res.writableEnded) res.end();
+  }
+};
 
 module.exports = { getMyRooms, getOrCreateRoom, getMessages, sendMessage, markAsRead, aiChat };

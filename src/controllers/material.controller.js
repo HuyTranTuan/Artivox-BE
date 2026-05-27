@@ -36,4 +36,10 @@ const updateMaterial = catchAsync(async (req, res) => {
   return res.success(data, "Material updated");
 });
 
-module.exports = { getMaterials, getMaterialBySlug, createMaterial, updateMaterial };
+const deleteMaterial = catchAsync(async (req, res) => {
+  const data = await materialService.deleteMaterial(req.params.slug);
+  if (!data) return res.notFound();
+  return res.success(null, "Material deleted successfully");
+});
+
+module.exports = { getMaterials, getMaterialBySlug, createMaterial, updateMaterial, deleteMaterial };

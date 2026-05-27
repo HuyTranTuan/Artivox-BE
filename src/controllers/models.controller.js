@@ -36,4 +36,10 @@ const updateModel = catchAsync(async (req, res) => {
   return res.success(data, "Model updated");
 });
 
-module.exports = { getModels, getModelBySlug, createModel, updateModel };
+const deleteModel = catchAsync(async (req, res) => {
+  const data = await modelsService.deleteModel(req.params.slug);
+  if (!data) return res.notFound();
+  return res.success(null, "Model deleted successfully");
+});
+
+module.exports = { getModels, getModelBySlug, createModel, updateModel, deleteModel };

@@ -11,5 +11,6 @@ router.get("/:slug", materialController.getMaterialBySlug);
 router.use(authMiddleware, restrictTo("ADMIN", "STAFF"));
 router.post("/", uploadProductImages, materialController.createMaterial);
 router.put("/:slug", uploadProductImages, materialController.updateMaterial);
+router.delete("/:slug", materialController.deleteMaterial);
 
 module.exports = router;

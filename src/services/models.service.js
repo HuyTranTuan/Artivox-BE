@@ -117,9 +117,22 @@ async function updateModel(slug, data, files) {
   return getModelBySlug(product.slug);
 }
 
+async function deleteModel(slug) {
+  const existing = await prisma.product.findFirst({
+    where: { slug, deletedAt: null, type: "MODEL" }
+  });
+  if (!existing) return null;
+
+  return prisma.product.update({
+    where: { id: existing.id },
+    data: { deletedAt: new Date() }
+  });
+}
+
 module.exports = {
   getModels,
   getModelBySlug,
   createModel,
-  updateModel
+  updateModel,
+  deleteModel
 };

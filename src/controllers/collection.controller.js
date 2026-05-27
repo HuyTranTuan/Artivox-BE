@@ -42,6 +42,12 @@ const removeProductFromCollection = catchAsync(async (req, res) => {
   return res.success(data, "Product removed from collection");
 });
 
+const deleteCollection = catchAsync(async (req, res) => {
+  const data = await collectionService.deleteCollectionBySlug(req.params.slug);
+  if (!data) return res.notFound();
+  return res.success(data, "Collection deleted");
+});
+
 module.exports = {
   getCollections,
   getCollectionsAdmin,
@@ -50,4 +56,6 @@ module.exports = {
   updateCollection,
   addProductToCollection,
   removeProductFromCollection,
+  deleteCollection,
 };
+

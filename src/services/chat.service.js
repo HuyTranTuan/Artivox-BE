@@ -2,7 +2,7 @@ const { prisma } = require("@libs/prisma");
 const AppError = require("@utils/AppError");
 const { HTTP_CODES } = require("@config/constants");
 const notificationService = require("@services/notification.service");
-const { generateAIResponse, buildConversationContext } = require("@services/ai.service");
+const { generateAIResponse, streamAITokens, buildConversationContext } = require("@services/ai.service");
 
 // Get or create chat room (staff creates with customerId, room "named" by customerId)
 async function getOrCreateRoom(staffId, customerId) {
@@ -102,4 +102,10 @@ async function aiChat(message, history = []) {
   return reply;
 }
 
-module.exports = { getOrCreateRoom, getAdminRooms, getCustomerRooms, getMessages, sendMessage, markAsRead, aiChat };
+// Standalone AI chat stream — returns an async generator yielding tokens
+function aiChatStreamTokens(message, history = []) {
+  const context = buildConversationContext(history);
+  return streamAITokens(message, context);
+}
+
+module.exports = { getOrCreateRoom, getAdminRooms, getCustomerRooms, getMessages, sendMessage, markAsRead, aiChat, aiChatStreamTokens };
