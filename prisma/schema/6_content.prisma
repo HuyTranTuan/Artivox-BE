@@ -82,21 +82,24 @@ model ChatMessage {
 // ─── Notifications ───────────────────────────────────
 
 model Notification {
-  id            BigInt           @id @default(autoincrement())
-  type          NotificationType
-  recipientId   BigInt
-  recipientType String
-  title         String
-  message       String
-  metadata      Json?
-  isRead        Boolean          @default(false)
-  readAt        DateTime?
+  id         BigInt           @id @default(autoincrement())
+  type       NotificationType
+  adminId    BigInt?
+  customerId BigInt?
+  title      String
+  message    String
+  metadata   Json?
+  isRead     Boolean          @default(false)
+  readAt     DateTime?
   
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  @@index([recipientId])
-  @@index([recipientType])
+  admin    AdminUser? @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([customerId])
   @@index([createdAt])
   @@index([isRead])
   @@map("notifications")

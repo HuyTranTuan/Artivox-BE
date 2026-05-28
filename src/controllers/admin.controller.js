@@ -54,7 +54,7 @@ const createStaff = catchAsync(async (req, res) => {
 
 const decentralizeStaff = catchAsync(async (req, res) => {
   const { email } = req.params;
-  const { create, update, del } = req.bopdy;
+  const { create, update, del } = req.body;
   const data = await adminService.decentralizeStaff(email, create, update, del);
   return res.success(data, "Updated Successed!", HTTP_CODES.OK);
 });

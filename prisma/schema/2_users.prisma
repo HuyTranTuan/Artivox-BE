@@ -17,6 +17,7 @@ model AdminUser {
   chatMessages ChatMessage[]
   orders       Order[]
   refreshTokens RefreshToken[]
+  notifications Notification[]
 
   @@index([email])
   @@index([createdAt])
@@ -48,6 +49,7 @@ model Customer {
   chatMessages ChatMessage[]
   activityLogs CustomerActivityLog[]
   refreshTokens RefreshToken[]
+  notifications Notification[]
 
   @@index([email])
   @@index([slug])

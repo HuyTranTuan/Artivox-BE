@@ -2,11 +2,12 @@ const { prisma } = require("@libs/prisma");
 
 // Create notification
 async function createNotification(recipientId, recipientType, { type, title, message, metadata }) {
+  const isAdmin = recipientType === "ADMIN";
   return prisma.notification.create({
     data: {
       type,
-      recipientId,
-      recipientType,
+      adminId: isAdmin ? BigInt(recipientId) : null,
+      customerId: !isAdmin ? BigInt(recipientId) : null,
       title,
       message,
       metadata: metadata || {},
@@ -16,9 +17,10 @@ async function createNotification(recipientId, recipientType, { type, title, mes
 
 // Get notifications for user/admin
 async function getNotifications(recipientId, recipientType, { limit = 20, offset = 0, isRead } = {}) {
+  const isAdmin = recipientType === "ADMIN";
   const where = {
-    recipientId,
-    recipientType,
+    adminId: isAdmin ? BigInt(recipientId) : null,
+    customerId: !isAdmin ? BigInt(recipientId) : null,
     ...(isRead !== undefined && { isRead }),
   };
 
@@ -32,10 +34,11 @@ async function getNotifications(recipientId, recipientType, { limit = 20, offset
 
 // Get unread count
 async function getUnreadCount(recipientId, recipientType) {
+  const isAdmin = recipientType === "ADMIN";
   return prisma.notification.count({
     where: {
-      recipientId,
-      recipientType,
+      adminId: isAdmin ? BigInt(recipientId) : null,
+      customerId: !isAdmin ? BigInt(recipientId) : null,
       isRead: false,
     },
   });
@@ -54,10 +57,11 @@ async function markAsRead(notificationId) {
 
 // Mark multiple as read
 async function markMultipleAsRead(recipientId, recipientType) {
+  const isAdmin = recipientType === "ADMIN";
   return prisma.notification.updateMany({
     where: {
-      recipientId,
-      recipientType,
+      adminId: isAdmin ? BigInt(recipientId) : null,
+      customerId: !isAdmin ? BigInt(recipientId) : null,
       isRead: false,
     },
     data: {

@@ -8,6 +8,7 @@ async function getModels(query = {}) {
   const where = {
     deletedAt: null,
     type: "MODEL",
+    ...(query.isActive !== undefined && { isActive: query.isActive }),
     ...(query.search && {
       OR: [
         { name: { contains: query.search, mode: "insensitive" } },
@@ -39,9 +40,14 @@ async function getModels(query = {}) {
   };
 }
 
-async function getModelBySlug(slug) {
+async function getModelBySlug(slug, query = {}) {
   const product = await prisma.product.findFirst({
-    where: { slug, deletedAt: null, type: "MODEL" },
+    where: {
+      slug,
+      deletedAt: null,
+      type: "MODEL",
+      ...(query.isActive !== undefined && { isActive: query.isActive }),
+    },
     include: { model3D: true, collection: true, images: { orderBy: { sortOrder: 'asc' } } },
   });
 

@@ -8,6 +8,7 @@ async function getMaterials(query = {}) {
   const where = {
     deletedAt: null,
     type: "MATERIAL",
+    ...(query.isActive !== undefined && { isActive: query.isActive }),
     ...(query.search && {
       OR: [
         { name: { contains: query.search, mode: "insensitive" } },
@@ -42,9 +43,14 @@ async function getMaterials(query = {}) {
 /**
  * Fetch a single material product by slug.
  */
-async function getMaterialBySlug(slug) {
+async function getMaterialBySlug(slug, query = {}) {
   const product = await prisma.product.findFirst({
-    where: { slug, deletedAt: null, type: "MATERIAL" },
+    where: {
+      slug,
+      deletedAt: null,
+      type: "MATERIAL",
+      ...(query.isActive !== undefined && { isActive: query.isActive }),
+    },
     include: { material: true, collection: true, images: { orderBy: { sortOrder: 'asc' } } },
   });
 

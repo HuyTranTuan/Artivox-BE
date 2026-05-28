@@ -5,6 +5,7 @@ async function getProducts(query = {}) {
   return prisma.product.findMany({
     where: {
       deletedAt: null,
+      ...(query.isActive !== undefined && { isActive: query.isActive }),
       ...(query.type && { type: query.type }),
       ...(query.search && {
         OR: [
@@ -20,9 +21,13 @@ async function getProducts(query = {}) {
 }
 
 // Fetch product by slug
-async function getProductBySlug(slug) {
+async function getProductBySlug(slug, query = {}) {
   return prisma.product.findFirst({
-    where: { slug, deletedAt: null },
+    where: {
+      slug,
+      deletedAt: null,
+      ...(query.isActive !== undefined && { isActive: query.isActive }),
+    },
     include: { model3D: true, material: true, tool: true, collection: true },
   });
 }

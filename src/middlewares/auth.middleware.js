@@ -10,11 +10,12 @@ const authMiddleware = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.error("No token provided", HTTP_CODES.UNAUTHORIZED);
     }
-
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, jwtSecret);
-    req.user = decoded;
-    req.newTokens = token;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = decoded;
+      req.newTokens = token;
+    }
     next();
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
