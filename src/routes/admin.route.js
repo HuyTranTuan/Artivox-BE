@@ -19,7 +19,7 @@ router.get("/dashboard", adminController.getAdminDashboard);
 router.get("/users", adminController.getAdminUsers);
 router.get("/customers", adminController.getCustomers);
 router.get("/customers/:slug", adminController.getCustomer);
-router.patch("/customers/:slug", adminController.getCustomerBanned);
+router.patch("/customers/:slug/banned", adminController.getCustomerBanned);
 router.get("/orders", adminController.getAllOrders);
 router.patch("/orders/:id", adminController.updateOrderStatus);
 router.get("/revenue", adminController.getAdminRevenue);

@@ -120,7 +120,7 @@ async function uploadAvatarImage(avatarStr, userId, userType) {
   const folder = userType === "customer" ? "customers" : "admin-staffs";
   // Always use a timestamp to bypass cache if image is replaced
   const ts = Date.now();
-  const key = `user-profiles/${folder}/${userId}-avatar-${ts}.${ext}`;
+  const key = `user-profiles/${folder}/${String(userId)}-avatar-${ts}.${ext}`;
   
   const body = await sharp(buffer, { failOn: "none" })
     .rotate()

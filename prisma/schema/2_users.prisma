@@ -6,12 +6,14 @@ model AdminUser {
   password   String    @db.VarChar(100)
   fullName   String    @db.VarChar(100)
   phone      String    @unique @db.VarChar(15)
-  avatar     String?   @db.VarChar(100)
+  avatar     String?   @db.VarChar(512)
   role       AdminRole @default(STAFF)
   permission String    @default("{create:false,update:false,del:false}")
   createdAt  DateTime  @default(now()) @db.Timestamp
   updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamp
   deletedAt  DateTime? @db.Timestamp
+  resetToken       String?   @db.VarChar(128)
+  resetTokenExpiry DateTime? @db.Timestamp
 
   articles     Article[]
   chatRooms    ChatRoom[]
@@ -34,13 +36,15 @@ model Customer {
   fullName                String?
   phone                   String?
   address                 String?
-  avatar                  String?   @db.VarChar(100)
+  avatar                  String?   @db.VarChar(512)
   dateOfBirth             DateTime?
   gender                  Gender?
   slug                    String    @unique
   verifiedAt              DateTime?
   verificationToken       String?
   verificationTokenExpiry DateTime?
+  resetToken              String?   @db.VarChar(128)
+  resetTokenExpiry        DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @default(now()) @updatedAt
   deletedAt               DateTime?

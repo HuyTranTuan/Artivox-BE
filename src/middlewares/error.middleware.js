@@ -6,6 +6,7 @@ const errorMiddleware = (err, req, res, next) => {
   err.status = err.status || "error";
 
   if (process.env.NODE_ENV === "development") {
+    console.error("ERROR 💥:", err);
     return res.status(err.statusCode).json({
       status: err.status,
       message: err.message,

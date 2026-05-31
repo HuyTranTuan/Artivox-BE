@@ -89,6 +89,33 @@ const resendVerifyEmail = catchAsync(async (req, res) => {
   return res.success(data, data.message);
 });
 
+// Change admin password
+const changeAdminPassword = catchAsync(async (req, res) => {
+  const data = await authService.changeAdminPassword(req.user.id, req.body);
+  return res.success(data, data.message);
+});
+
+// Change customer password
+const changeCustomerPassword = catchAsync(async (req, res) => {
+  const data = await authService.changeCustomerPassword(req.user.id, req.body);
+  return res.success(data, data.message);
+});
+
+// Forgot password
+const forgotPassword = catchAsync(async (req, res) => {
+  const { email, userType } = req.body;
+  if (!email) return res.status(400).json({ status: "error", message: "Email is required" });
+  const data = await authService.forgotPassword(email, userType || "customer");
+  return res.success(data, data.message);
+});
+
+// Reset password by token
+const resetPassword = catchAsync(async (req, res) => {
+  const { token, newPassword } = req.body;
+  const data = await authService.resetPassword(token, newPassword);
+  return res.success(data, data.message);
+});
+
 module.exports = {
   adminLogin,
   customerRegister,
@@ -97,6 +124,10 @@ module.exports = {
   logout,
   updateAdminAccount,
   updateCustomerAccount,
+  changeAdminPassword,
+  changeCustomerPassword,
+  forgotPassword,
+  resetPassword,
   verifyEmail,
   resendVerifyEmail,
 };
