@@ -6,6 +6,7 @@ model AdminUser {
   password   String    @db.VarChar(100)
   fullName   String    @db.VarChar(100)
   phone      String    @unique @db.VarChar(15)
+  avatar     String?   @db.VarChar(100)
   role       AdminRole @default(STAFF)
   permission String    @default("{create:false,update:false,del:false}")
   createdAt  DateTime  @default(now()) @db.Timestamp
@@ -33,6 +34,7 @@ model Customer {
   fullName                String?
   phone                   String?
   address                 String?
+  avatar                  String?   @db.VarChar(100)
   dateOfBirth             DateTime?
   gender                  Gender?
   slug                    String    @unique

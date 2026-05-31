@@ -8,6 +8,7 @@ const { HTTP_CODES } = require("@/config/constants");
 const BAD_REQUEST = HTTP_CODES.BAD_REQUESTED;
 const AppError = require("@/utils/AppError");
 const { sendVerificationEmail } = require("@services/mail.service");
+const { uploadAvatarImage } = require("@services/image.service");
 
 function normalizeEmail(email) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
@@ -212,7 +213,7 @@ async function logout(userId, userType) {
 }
 
 // Update admin account information
-async function updateAdminAccount(userId, { fullName, email, phone, address }) {
+async function updateAdminAccount(userId, { fullName, email, phone, address, avatar }) {
   const user = await prisma.adminUser.findFirst({
     where: { id: userId, deletedAt: null },
   });
@@ -227,6 +228,11 @@ async function updateAdminAccount(userId, { fullName, email, phone, address }) {
     if (existing) throw new AppError("Email already in use", HTTP_CODES.CONFLICT);
   }
 
+  let finalAvatar = user.avatar;
+  if (avatar) {
+    finalAvatar = await uploadAvatarImage(avatar, userId, "admin");
+  }
+
   const updated = await prisma.adminUser.update({
     where: { id: userId },
     data: {
@@ -234,6 +240,7 @@ async function updateAdminAccount(userId, { fullName, email, phone, address }) {
       ...(email && { email }),
       ...(phone && { phone }),
       ...(address && { address }),
+      ...(finalAvatar && { avatar: finalAvatar }),
     },
   });
 
@@ -244,11 +251,12 @@ async function updateAdminAccount(userId, { fullName, email, phone, address }) {
     role: updated.role,
     phone: updated.phone,
     address: updated.address,
+    avatar: updated.avatar,
   };
 }
 
 // Update customer account information
-async function updateCustomerAccount(customerId, { fullName, email, phone, address, password }) {
+async function updateCustomerAccount(customerId, { fullName, email, phone, address, password, avatar }) {
   const user = await prisma.customer.findFirst({
     where: { id: customerId, deletedAt: null },
   });
@@ -265,12 +273,18 @@ async function updateCustomerAccount(customerId, { fullName, email, phone, addre
 
   const slug = fullName ? slugify(fullName) + "-" + Date.now().toString(36) : user.slug;
 
+  let finalAvatar = user.avatar;
+  if (avatar) {
+    finalAvatar = await uploadAvatarImage(avatar, customerId, "customer");
+  }
+
   const updateData = {
     ...(fullName && { fullName }),
     ...(email && { email }),
     ...(phone && { phone }),
     ...(address && { address }),
     ...(fullName && { slug }),
+    ...(finalAvatar && { avatar: finalAvatar }),
   };
 
   // Hash new password if provided
@@ -290,6 +304,7 @@ async function updateCustomerAccount(customerId, { fullName, email, phone, addre
     phone: updated.phone,
     address: updated.address,
     slug: updated.slug,
+    avatar: updated.avatar,
   };
 }
 

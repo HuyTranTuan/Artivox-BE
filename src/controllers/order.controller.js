@@ -69,4 +69,22 @@ const approveOrder = catchAsync(async (req, res) => {
   return res.success(data, "Order approved");
 });
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder };
+// Update order payment status
+const updateOrderPaymentStatus = catchAsync(async (req, res) => {
+  const userID = req.user.id;
+  const { orderId } = req.params;
+  const { paymentStatus } = req.body;
+  const data = await orderService.updateOrderPaymentStatus(orderId, userID, paymentStatus);
+  
+  // Emit to client
+  req.app.get("io").of("/chat").to(`chat:${userID}`).emit("order_status_updated", {
+    orderId: data.id.toString(),
+    status: data.status,
+    paymentStatus: data.paymentStatus,
+  });
+
+  return res.success(data, "Order payment status updated");
+});
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder, updateOrderPaymentStatus };
+

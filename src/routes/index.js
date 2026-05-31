@@ -13,6 +13,7 @@ const discountOrderRoutes = require("@routes/discountOrder.route");
 const customerActivityLogRoutes = require("@routes/customerActivityLog.route");
 const notificationRoutes = require("@routes/notification.route");
 const searchRoutes = require("@routes/search.route");
+const locationRoutes = require("@routes/location.route");
 
 const router = express.Router();
 
@@ -33,5 +34,6 @@ router.use("/discount_orders", discountOrderRoutes);
 router.use("/customer-activity-log", customerActivityLogRoutes);
 router.use("/notifications", notificationRoutes);
 router.use("/search", searchRoutes);
+router.use("/location", locationRoutes);
 
 module.exports = router;

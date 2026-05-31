@@ -2,20 +2,58 @@ const { HTTP_CODES } = require("@/config/constants");
 const { prisma } = require("@libs/prisma");
 const { v4: uuidv4 } = require("uuid");
 const notificationService = require("@services/notification.service");
+const AppError = require("@/utils/AppError");
 
-// Create order from cart
-async function createOrder(customerId, { shippingAddress }) {
-  const cartItems = await prisma.cartItem.findMany({
-    where: { customerId },
-    include: { product: true },
-  });
-  if (!cartItems.length) return res.notFound();
+// Create order from items
+async function createOrder(customerId, {
+  shippingAddress,
+  note,
+  shippingFee = 0,
+  discountAmount = 0,
+  paymentMethod = "BANK_TRANSFER",
+  paymentStatus = "PENDING",
+  deliveryDate,
+  deliveryTime,
+  items = [],
+}) {
+  if (!items || !items.length) {
+    throw new AppError("Cart is empty", HTTP_CODES.BAD_REQUESTED);
+  }
 
-  let totalAmount = 0;
-  const orderItems = cartItems.map((item) => {
-    totalAmount += item.product.price * item.quantity;
-    return { productId: item.productId, quantity: item.quantity, unitPrice: item.product.price };
+  // Validate items
+  for (const item of items) {
+    if (!item.productId || !item.quantity || item.quantity <= 0) {
+      throw new AppError("Invalid item in cart", HTTP_CODES.BAD_REQUESTED);
+    }
+  }
+
+  const productIds = items.map((item) => BigInt(item.productId));
+  const products = await prisma.product.findMany({
+    where: {
+      id: { in: productIds },
+      deletedAt: null,
+    },
   });
+
+  const productMap = new Map(products.map((p) => [p.id.toString(), p]));
+
+  let itemsAmount = 0;
+  const orderItems = [];
+
+  for (const item of items) {
+    const product = productMap.get(item.productId.toString());
+    if (!product) {
+      throw new AppError(`Product with ID ${item.productId} not found`, HTTP_CODES.NOT_FOUND);
+    }
+    const price = product.discountedPrice && product.discountedPrice > 0 ? product.discountedPrice : product.basePrice;
+    itemsAmount += price * item.quantity;
+    orderItems.push({
+      productId: product.id,
+      quantity: item.quantity,
+    });
+  }
+
+  const totalAmount = itemsAmount + shippingFee - discountAmount + (itemsAmount * 0.1);
 
   const order = await prisma.order.create({
     data: {
@@ -23,13 +61,18 @@ async function createOrder(customerId, { shippingAddress }) {
       customerId,
       totalAmount,
       shippingAddress,
+      note,
+      shippingFee,
+      discountAmount,
+      paymentMethod,
+      paymentStatus,
+      paidAt: paymentStatus === "PAID" ? new Date() : null,
+      deliveryDate,
+      deliveryTime,
       items: { create: orderItems },
     },
     include: { items: { include: { product: true } } },
   });
-
-  // Clear cart
-  await prisma.cartItem.deleteMany({ where: { customerId } });
 
   // Send notification to admins about new order
   const admins = await prisma.adminUser.findMany({
@@ -42,7 +85,7 @@ async function createOrder(customerId, { shippingAddress }) {
       type: "ORDER_CREATED",
       title: "New Order Created",
       message: `New order: ${order.orderNumber} - ₫${totalAmount.toLocaleString("en-US")}`,
-      metadata: { orderId: order.id, customerId },
+      metadata: { orderId: order.id.toString(), customerId: customerId.toString() },
     });
   }
 
@@ -63,12 +106,16 @@ async function cancelOrder(id, customerId) {
   const order = await prisma.order.findFirst({
     where: { id: BigInt(id), customerId },
   });
-  if (!order) return res.notFound();
-  if (order.status !== "PENDING") return res.error("Only pending orders can be cancelled", HTTP_CODES.BAD_REQUESTED);
+  if (!order) {
+    throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
+  }
+  if (order.status !== "PENDING") {
+    throw new AppError("Only pending orders can be cancelled", HTTP_CODES.BAD_REQUESTED);
+  }
 
   return prisma.order.update({
     where: { id: BigInt(id) },
-    data: { status: "CANCELLED" },
+    data: { status: "CANCELED" },
   });
 }
 
@@ -80,7 +127,7 @@ async function getAllOrders() {
     where: { deletedAt: null },
     include: {
       items: { include: { product: true } },
-      customer: { select: { id: true, fullName: true, email: true, slug: true } },
+      customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -94,7 +141,7 @@ async function getOrderById(id) {
     where: { id: BigInt(id), deletedAt: null },
     include: {
       items: { include: { product: true } },
-      customer: { select: { id: true, fullName: true, email: true, slug: true } },
+      customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },
     },
   });
 }
@@ -108,8 +155,12 @@ async function approveOrder(orderId) {
     include: { customer: { select: { id: true, fullName: true } } },
   });
 
-  if (!order) return res.notFound();
-  if (order.status !== "PENDING") return res.error("Only pending orders can be approved", HTTP_CODES.BAD_REQUESTED);
+  if (!order) {
+    throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
+  }
+  if (order.status !== "PENDING") {
+    throw new AppError("Only pending orders can be approved", HTTP_CODES.BAD_REQUESTED);
+  }
 
   const updated = await prisma.order.update({
     where: { id: BigInt(orderId) },
@@ -122,10 +173,27 @@ async function approveOrder(orderId) {
     type: "ORDER_APPROVED",
     title: "Order Approved",
     message: `Your order ${order.orderNumber} has been approved and is being prepared`,
-    metadata: { orderId },
+    metadata: { orderId: orderId.toString() },
   });
 
   return updated;
 }
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder };
+// Update order payment status
+async function updateOrderPaymentStatus(id, customerId, paymentStatus) {
+  const order = await prisma.order.findFirst({
+    where: { id: BigInt(id), customerId },
+  });
+  if (!order) {
+    throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
+  }
+  return prisma.order.update({
+    where: { id: BigInt(id) },
+    data: {
+      paymentStatus,
+      paidAt: paymentStatus === "PAID" ? new Date() : order.paidAt,
+    },
+  });
+}
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder, updateOrderPaymentStatus };

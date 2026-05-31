@@ -22,6 +22,7 @@ Artivox-BE backend.
 - `src/routes/index.js`
 - `src/routes/catalog.route.js`
 - `src/routes/article.route.js`
+- `src/routes/location.route.js`
 - `src/controllers/*.controller.js`
 - `src/services/*.service.js`
 - `src/validators/*.validator.js`

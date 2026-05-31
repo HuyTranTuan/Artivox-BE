@@ -103,7 +103,45 @@ async function uploadStaffImage(file, staffId) {
   };
 }
 
+async function uploadAvatarImage(avatarStr, userId, userType) {
+  if (!avatarStr || !avatarStr.startsWith("data:image/")) {
+    return avatarStr;
+  }
+  
+  const matches = avatarStr.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    throw new AppError("Invalid image format", HTTP_CODES.BAD_REQUESTED);
+  }
+  
+  const ext = matches[1] === "jpeg" ? "jpg" : matches[1];
+  const buffer = Buffer.from(matches[2], "base64");
+  
+  const bucket = getBucketName();
+  const folder = userType === "customer" ? "customers" : "admin-staffs";
+  // Always use a timestamp to bypass cache if image is replaced
+  const ts = Date.now();
+  const key = `user-profiles/${folder}/${userId}-avatar-${ts}.${ext}`;
+  
+  const body = await sharp(buffer, { failOn: "none" })
+    .rotate()
+    .resize(512, 512, { fit: "cover" })
+    .toBuffer();
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: `image/${matches[1]}`,
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return buildPublicUrl(key);
+}
+
 module.exports = {
   STAFF_IMAGE_VARIANTS,
   uploadStaffImage,
+  uploadAvatarImage,
 };

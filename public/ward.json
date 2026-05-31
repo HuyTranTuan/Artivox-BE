@@ -1,0 +1,106 @@
+{
+  "new_wards_by_province": {
+    "SG": [
+      {
+        "code": "W_SAIGON",
+        "district_code": "D1",
+        "name": {
+          "vi": "Phường Sài Gòn",
+          "en": "Sai Gon Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập từ Bến Nghé, một phần Đa Kao, Nguyễn Thái Bình",
+          "en": "Merged from Ben Nghe and parts of Da Kao, Nguyen Thai Binh"
+        }
+      },
+      {
+        "code": "W_BENTHANH",
+        "district_code": "D1",
+        "name": {
+          "vi": "Phường Bến Thành",
+          "en": "Ben Thanh Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập từ Bến Thành, Phạm Ngũ Lão, một phần Cầu Ông Lãnh, Nguyễn Thái Bình",
+          "en": "Merged from Ben Thanh, Pham Ngu Lao, parts of Cau Ong Lanh, Nguyen Thai Binh"
+        }
+      },
+      {
+        "code": "W_TANDINH",
+        "district_code": "D1",
+        "name": {
+          "vi": "Phường Tân Định",
+          "en": "Tan Dinh Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập từ Tân Định và phần còn lại của Đa Kao",
+          "en": "Merged from Tan Dinh and remainder of Da Kao"
+        }
+      },
+      {
+        "code": "W_CAUONGLANH",
+        "district_code": "D1",
+        "name": {
+          "vi": "Phường Cầu Ông Lãnh",
+          "en": "Cau Ong Lanh Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập từ Nguyễn Cư Trinh, Cầu Kho, Cô Giang và phần còn lại của Cầu Ông Lãnh",
+          "en": "Merged from Nguyen Cu Trinh, Cau Kho, Co Giang and remainder of Cau Ong Lanh"
+        }
+      },
+      {
+        "code": "W_BANCO",
+        "district_code": "D3",
+        "name": {
+          "vi": "Phường Bàn Cờ",
+          "en": "Ban Co Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập Phường 1, 2, 3, 5 và một phần Phường 4 (Quận 3)",
+          "en": "Merged Wards 1, 2, 3, 5 and part of Ward 4 (District 3)"
+        }
+      },
+      {
+        "code": "W_XUANHOA",
+        "district_code": "D3",
+        "name": {
+          "vi": "Phường Xuân Hòa",
+          "en": "Xuan Hoa Ward"
+        },
+        "note": {
+          "vi": "Sáp nhập phường Võ Thị Sáu và phần còn lại của Phường 4 (Quận 3)",
+          "en": "Merged Vo Thi Sau and remainder of Ward 4 (District 3)"
+        }
+      }
+    ],
+    "ST": [
+      {
+        "code": "W_PHUONG1_ST",
+        "district_code": "TP_ST",
+        "name": {
+          "vi": "Phường 1",
+          "en": "Ward 1"
+        },
+        "note": {
+          "vi": "Sáp nhập từ Phường 9 và Phường 1 cũ",
+          "en": "Merged from former Ward 9 and Ward 1"
+        }
+      }
+    ],
+    "TQ": [
+      {
+        "code": "W_HONGSON_TQ",
+        "district_code": "H_SONDUONG",
+        "name": {
+          "vi": "Xã Hồng Sơn",
+          "en": "Hong Son Commune"
+        },
+        "note": {
+          "vi": "Sáp nhập từ xã Hồng Lạc và xã khác",
+          "en": "Merged from Hong Lac and other commune"
+        }
+      }
+    ]
+  }
+}
