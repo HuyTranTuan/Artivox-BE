@@ -29,6 +29,7 @@ const uploadProductImages = multer({
   { name: "thumbnail_after", maxCount: 1 },
   { name: "gallery", maxCount: 20 },
   { name: "image", maxCount: 1 }, // collection image
+  { name: "coverImage", maxCount: 1 }, // article image
 ]);
 
 module.exports = {

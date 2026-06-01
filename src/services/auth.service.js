@@ -52,6 +52,7 @@ async function adminLogin(email, password) {
     id: user.id,
     email: user.email,
     role: user.role,
+    permission: user.permission,
     type: "admin",
   });
 
@@ -62,6 +63,7 @@ async function adminLogin(email, password) {
       email: user.email,
       fullName: user.fullName,
       role: user.role,
+      permission: user.permission,
     },
   };
   return result;

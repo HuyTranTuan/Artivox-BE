@@ -22,7 +22,7 @@ async function getMaterials(query = {}) {
     prisma.product.findMany({
       where,
       include: { material: true, images: { orderBy: { sortOrder: 'asc' } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: query.limit,
       skip: query.skip,
     }),

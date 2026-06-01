@@ -1,12 +1,18 @@
 const { prisma } = require("@libs/prisma");
 const notificationService = require("@services/notification.service");
+const productImageService = require("@services/productImage.service");
 const slugify = require("@utils/slugify")
 
 // Create article
-async function createArticle(authorId, { slug, coverImage, translations }) {
+async function createArticle(authorId, data, files) {
+  let { slug, coverImage, translations } = data;
+  if (typeof translations === "string") {
+    try { translations = JSON.parse(translations); } catch (e) {}
+  }
+
   const articleSlug = slug || slugify(translations?.[0]?.title || "article") + "-" + Date.now().toString(36);
 
-  const article = await prisma.article.create({
+  let article = await prisma.article.create({
     data: {
       slug: articleSlug,
       authorId,
@@ -15,6 +21,15 @@ async function createArticle(authorId, { slug, coverImage, translations }) {
     },
     include: { translations: true },
   });
+
+  if (files && files.coverImage && files.coverImage[0]) {
+    const uploadedUrl = await productImageService.uploadArticleImage(article.id, files.coverImage[0]);
+    article = await prisma.article.update({
+      where: { id: article.id },
+      data: { coverImage: uploadedUrl },
+      include: { translations: true },
+    });
+  }
 
   // Send notification to all admins about new article
   const title = translations?.[0]?.title || "New Article";
@@ -61,11 +76,27 @@ async function getArticleBySlug(slug) {
 }
 
 // Update article by slug
-async function updateArticle(slug, authorId, data) {
-  const article = await prisma.article.findFirst({ where: { slug, authorId, deletedAt: null } });
+async function updateArticle(slug, user, data, files) {
+  const article = await prisma.article.findFirst({ where: { slug, deletedAt: null } });
   if (!article) return res.notFound();
 
-  const { translations, ...articleData } = data;
+  let { translations, status, ...articleData } = data;
+  if (typeof translations === "string") {
+    try { translations = JSON.parse(translations); } catch (e) {}
+  }
+
+  if (files && files.coverImage && files.coverImage[0]) {
+    articleData.coverImage = await productImageService.uploadArticleImage(article.id, files.coverImage[0]);
+  }
+
+  // Only ADMIN/MANAGER can update publishedAt or status
+  if (user && (user.role === "ADMIN" || user.role === "MANAGER")) {
+    if (status === "Published") {
+      articleData.publishedAt = article.publishedAt || new Date();
+    } else if (status === "Draft" || status === "Review") {
+      articleData.publishedAt = null;
+    }
+  }
 
   return prisma.article.update({
     where: { id: article.id },
@@ -87,7 +118,7 @@ async function updateArticle(slug, authorId, data) {
 
 // Delete article by slug (soft)
 async function deleteArticle(slug, authorId) {
-  const article = await prisma.article.findFirst({ where: { slug, authorId, deletedAt: null } });
+  const article = await prisma.article.findFirst({ where: { slug, deletedAt: null } });
   if (!article) return res.notFound();
 
   return prisma.article.update({
@@ -128,7 +159,7 @@ async function approveArticle(articleId, adminId) {
  */
 async function getArticlesByLocale(locale) {
   return prisma.article.findMany({
-    where: { deletedAt: null, publishedAt: true, translations: { some: { locale } } },
+    where: { deletedAt: null, publishedAt: { not: null }, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
       author: { select: { id: true, fullName: true, slug: true } },
@@ -142,7 +173,7 @@ async function getArticlesByLocale(locale) {
  */
 async function getArticleBySlugAndLocale(slug, locale) {
   const article = await prisma.article.findFirst({
-    where: { slug, deletedAt: null, publishedAt: true, translations: { some: { locale } } },
+    where: { slug, deletedAt: null, publishedAt: { not: null }, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
       author: { select: { id: true, fullName: true, slug: true } },

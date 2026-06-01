@@ -12,12 +12,12 @@ const getArticleBySlug = catchAsync(async (req, res) => {
 });
 
 const createArticle = catchAsync(async (req, res) => {
-  const data = await articleService.createArticle(req.user.id, req.body);
+  const data = await articleService.createArticle(req.user.id, req.body, req.files);
   return res.success(data, "Article created", 201);
 });
 
 const updateArticle = catchAsync(async (req, res) => {
-  const data = await articleService.updateArticle(req.params.slug, req.user.id, req.body);
+  const data = await articleService.updateArticle(req.params.slug, req.user, req.body, req.files);
   return res.success(data, "Article updated");
 });
 

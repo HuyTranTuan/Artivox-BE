@@ -22,7 +22,7 @@ async function getModels(query = {}) {
     prisma.product.findMany({
       where,
       include: { model3D: true, images: { orderBy: { sortOrder: 'asc' } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: query.limit,
       skip: query.skip,
     }),

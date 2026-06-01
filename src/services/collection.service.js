@@ -17,6 +17,7 @@ async function getCollections(query = {}) {
   const [items, total] = await prisma.$transaction([
     prisma.collection.findMany({
       where,
+      include: { _count: { select: { products: true } } },
       orderBy: { createdAt: "desc" },
       take: query.limit,
       skip: query.skip,
@@ -25,7 +26,7 @@ async function getCollections(query = {}) {
   ]);
 
   return {
-    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image) })),
+    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image), itemCount: c._count.products })),
     total,
     limit: query.limit,
     skip: query.skip,
@@ -56,7 +57,7 @@ async function getCollectionsAdmin(query = {}) {
   ]);
 
   return {
-    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image) })),
+    items: items.map((c) => ({ ...c, image: getSecureImageUrl(c.image), itemCount: c._count.products })),
     total,
     limit: query.limit,
     skip: query.skip,
@@ -87,20 +88,25 @@ async function getCollectionBySlug(slug) {
 
 // Create collection
 async function createCollection(data, files) {
-  let imageUrl = null;
-  if (files?.image?.[0]) {
-    imageUrl = await uploadCollectionImage(data.slug, files.image[0]);
-  }
-
-  return prisma.collection.create({
+  const collection = await prisma.collection.create({
     data: {
       name: data.name,
       slug: data.slug,
       description: data.description || null,
-      image: imageUrl,
+      image: null,
       isActive: data.isActive !== undefined ? data.isActive === "true" || data.isActive === true : true,
     },
   });
+
+  if (files?.image?.[0]) {
+    const imageUrl = await uploadCollectionImage(collection.id, files.image[0]);
+    return prisma.collection.update({
+      where: { id: collection.id },
+      data: { image: imageUrl },
+    });
+  }
+
+  return collection;
 }
 
 // Update collection by slug
@@ -110,7 +116,7 @@ async function updateCollectionBySlug(slug, data, files) {
 
   let imageUrl = existing.image;
   if (files?.image?.[0]) {
-    imageUrl = await uploadCollectionImage(data.slug || slug, files.image[0]);
+    imageUrl = await uploadCollectionImage(existing.id, files.image[0]);
   }
 
   return prisma.collection.update({

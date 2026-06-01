@@ -47,6 +47,23 @@ async function uploadToR2(buffer, key) {
 }
 
 /**
+ * Upload a raw buffer to R2 and return the public URL.
+ */
+async function uploadRawToR2(buffer, key, contentType) {
+  const bucket = getBucketName();
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType || "application/octet-stream",
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+  return buildPublicUrl(key);
+}
+
+/**
  * Upload product images to R2 and create ProductImage records.
  * Path convention: products/{slug}/thumbnail-before.webp, thumbnail-after.webp, gallery-{i}.webp
  *
@@ -131,12 +148,24 @@ async function uploadProductImages(productId, slug, files) {
 
 /**
  * Upload a single collection image to R2.
- * Path: collections/{slug}/image.webp
+ * Path: collections/{id}-collection.{ext}
  */
-async function uploadCollectionImage(slug, file) {
+async function uploadCollectionImage(id, file) {
   if (!file?.buffer) return null;
-  const key = `collections/${slug}/image.webp`;
-  return uploadToR2(file.buffer, key);
+  const ext = file.originalname ? file.originalname.split(".").pop().toLowerCase() : "png";
+  const key = `collections/${id}-collection.${ext}`;
+  return uploadRawToR2(file.buffer, key, file.mimetype);
+}
+
+/**
+ * Upload a single article image to R2.
+ * Path: articles/{id}-article.{ext}
+ */
+async function uploadArticleImage(id, file) {
+  if (!file?.buffer) return null;
+  const ext = file.originalname ? file.originalname.split(".").pop().toLowerCase() : "png";
+  const key = `articles/${id}-article.${ext}`;
+  return uploadRawToR2(file.buffer, key, file.mimetype);
 }
 
 /**
@@ -167,8 +196,10 @@ function secureProductImages(product) {
 
 module.exports = {
   uploadToR2,
+  uploadRawToR2,
   uploadProductImages,
   uploadCollectionImage,
+  uploadArticleImage,
   getSecureImageUrl,
   secureProductImages,
 };

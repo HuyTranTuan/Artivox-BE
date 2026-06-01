@@ -1,6 +1,7 @@
 const express = require("express");
 const articleController = require("@controllers/article.controller");
 const { authMiddleware, restrictTo } = require("@middlewares/auth.middleware");
+const { uploadProductImages } = require("@middlewares/upload.middleware");
 
 const router = express.Router();
 
@@ -43,8 +44,8 @@ router.get("/", articleController.getArticles);
 router.get("/:slug", articleController.getArticleBySlug);
 
 // Admin CRUD
-router.post("/", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.createArticle);
-router.put("/:slug", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.updateArticle);
+router.post("/", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), uploadProductImages, articleController.createArticle);
+router.put("/:slug", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), uploadProductImages, articleController.updateArticle);
 router.delete("/:slug", authMiddleware, restrictTo("ADMIN", "MANAGER", "STAFF"), articleController.deleteArticle);
 router.patch("/:articleId/approve", authMiddleware, restrictTo("ADMIN", "MANAGER"), articleController.approveArticle);
 

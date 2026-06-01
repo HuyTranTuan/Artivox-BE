@@ -52,4 +52,43 @@ const restrictTo = (...roles) => {
   };
 };
 
-module.exports = { authMiddleware, restrictTo };
+// Optional JWT verification (doesn't fail if token is missing or invalid, but decodes if present)
+const optionalAuthMiddleware = async (req, res, next) => {
+  try {
+    const authHeader = req?.headers?.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return next();
+    }
+    const token = authHeader.split(" ")[1];
+    if (!token || token === "null" || token === "undefined") {
+      return next();
+    }
+    try {
+      const decoded = jwt.verify(token, jwtSecret);
+      req.user = decoded;
+      req.newTokens = token;
+      return next();
+    } catch (error) {
+      if (error.name === "TokenExpiredError") {
+        const refreshToken = authService.extractRefreshToken(req);
+        if (!refreshToken) {
+          return next();
+        }
+        try {
+          const tokens = await authService.refreshToken(refreshToken);
+          const decoded = jwt.verify(tokens.accessToken, jwtSecret);
+          req.user = decoded;
+          req.newTokens = tokens;
+          return next();
+        } catch (refreshError) {
+          return next();
+        }
+      }
+      return next();
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { authMiddleware, restrictTo, optionalAuthMiddleware };
