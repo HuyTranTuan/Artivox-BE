@@ -264,16 +264,20 @@ async function getRevenueByProductType() {
     },
   });
 
-  return orderItems.reduce(
-    (acc, item) => {
-      const type = item.product?.type || "UNKNOWN";
-      const price = item.product?.basePrice || 0;
-      const total = price * item.quantity;
-      acc[type] = (acc[type] || 0) + total;
-      return acc;
-    },
-    { MODEL: 0, MATERIAL: 0, TOOL: 0 },
-  );
+  const CATEGORIES = [
+    { name: "MODEL", value: 0, color: "#FF6B35" },
+    { name: "MATERIAL", value: 0, color: "#008060" },
+    { name: "TOOL", value: 0, color: "#6E54FF" },
+  ];
+
+  const totals = {};
+  for (const item of orderItems) {
+    const type = item.product?.type || "UNKNOWN";
+    const price = item.product?.basePrice || 0;
+    totals[type] = (totals[type] || 0) + price * item.quantity;
+  }
+
+  return CATEGORIES.map((cat) => ({ ...cat, value: totals[cat.name] || 0 }));
 }
 
 // --- HELPER 4: Financial KPIs (Revenue, Orders, AOV) ---
