@@ -164,7 +164,7 @@ async function getArticlesByLocale(locale) {
     where: { deletedAt: null, publishedAt: { not: null }, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
-      author: { select: { id: true, fullName: true, slug: true } },
+      author: { select: { id: true, fullName: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -178,7 +178,7 @@ async function getArticleBySlugAndLocale(slug, locale) {
     where: { slug, deletedAt: null, publishedAt: { not: null }, translations: { some: { locale } } },
     include: {
       translations: { where: { locale } },
-      author: { select: { id: true, fullName: true, slug: true } },
+      author: { select: { id: true, fullName: true } },
     },
   });
   if (!article) throw new AppError("Article not found", HTTP_CODES.NOT_FOUND);

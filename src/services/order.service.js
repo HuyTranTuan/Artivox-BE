@@ -107,6 +107,14 @@ async function createOrder(customerId, {
     include: { items: { include: { product: true } } },
   });
 
+  // Deduct stock for each ordered item
+  for (const item of orderItems) {
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { stock: { decrement: item.quantity } },
+    });
+  }
+
   if (appliedDiscount) {
     await prisma.discount.update({
       where: { id: appliedDiscount.id },

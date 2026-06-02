@@ -79,9 +79,70 @@ async function removeProductDiscount(productId) {
   });
 }
 
+// Rate product
+async function rateProduct(productSlug, rating) {
+  const product = await prisma.product.findFirst({
+    where: { slug: productSlug, deletedAt: null },
+  });
+  if (!product) return null;
+
+  const newRatingCount = [...(product.ratingCount || []), rating];
+  const newRatingAvg = newRatingCount.reduce((a, b) => a + b, 0) / newRatingCount.length;
+
+  return prisma.product.update({
+    where: { id: product.id },
+    data: {
+      ratingCount: newRatingCount,
+      ratingAvg: newRatingAvg,
+    },
+  });
+}
+
+// Update product
+async function updateProduct(productId, data) {
+  const product = await prisma.product.findFirst({
+    where: { id: BigInt(productId), deletedAt: null },
+  });
+  if (!product) return null;
+
+  const updateData = {};
+  if (data.collectionId !== undefined) {
+    updateData.collectionId = data.collectionId ? BigInt(data.collectionId) : null;
+  }
+  
+  if (data.discountCampainId !== undefined) {
+    if (data.discountCampainId) {
+      const discount = await prisma.discount.findFirst({
+        where: { id: BigInt(data.discountCampainId), isActive: true },
+      });
+      if (discount) {
+        updateData.discountCampainId = discount.id;
+        let discountedPrice = product.basePrice;
+        if (discount.type === "PERCENT") {
+          discountedPrice = product.basePrice - (product.basePrice * discount.value) / 100;
+        } else if (discount.type === "FIXED") {
+          discountedPrice = product.basePrice - discount.value;
+        }
+        if (discountedPrice < 0) discountedPrice = 0;
+        updateData.discountedPrice = discountedPrice;
+      }
+    } else {
+      updateData.discountCampainId = null;
+      updateData.discountedPrice = null;
+    }
+  }
+
+  return prisma.product.update({
+    where: { id: product.id },
+    data: updateData,
+  });
+}
+
 module.exports = {
   getProducts,
   getProductBySlug,
   updateProductDiscountCampaign,
   removeProductDiscount,
+  rateProduct,
+  updateProduct,
 };

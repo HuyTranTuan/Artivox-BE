@@ -7,33 +7,18 @@ const router = express.Router();
 
 // Public - locale specific (must come before generic :slug)
 router.get(
-  "/vi",
+  "/:language(en|vi|vn)",
   (req, res, next) => {
-    req.params.locale = "vi";
+    req.params.locale = req.params.language === "vn" ? "vi" : req.params.language;
     next();
   },
   articleController.getArticlesByLocale,
 );
+
 router.get(
-  "/en",
+  "/:language(en|vi|vn)/:slug",
   (req, res, next) => {
-    req.params.locale = "en";
-    next();
-  },
-  articleController.getArticlesByLocale,
-);
-router.get(
-  "/vi/:slug",
-  (req, res, next) => {
-    req.params.locale = "vi";
-    next();
-  },
-  articleController.getArticleBySlugAndLocale,
-);
-router.get(
-  "/en/:slug",
-  (req, res, next) => {
-    req.params.locale = "en";
+    req.params.locale = req.params.language === "vn" ? "vi" : req.params.language;
     next();
   },
   articleController.getArticleBySlugAndLocale,
