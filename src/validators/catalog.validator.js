@@ -26,14 +26,14 @@ const toolQuerySchema = z.object({
 });
 
 const createModelSchema = z.object({
-  name: z.string.max(128).require(),
-  slug: z.string.min(10).max(150).require(),
-  thumbnail: z.string.require(),
-  description: z.string.min(20).max(255).require(),
+  name: z.string().max(128),
+  slug: z.string().min(10).max(150),
+  thumbnail: z.string(),
+  description: z.string().min(20).max(255),
   type: z.enum(["MODEL", "MATERIAL", "TOOL"]).optional().default("MODEL"),
-  collection: z.enum(["MODEL", "MATERIAL", "TOOL"]).optional().default("MODEL"),
+  collectionId: z.coerce.number().positive().optional(),
   basePrice: z.coerce.number().positive().default(0).optional(),
   stock: z.coerce.number().int().positive().default(0).optional(),
-})
+});
 
-module.exports = { productQuerySchema, modelQuerySchema, materialQuerySchema, toolQuerySchema }
+module.exports = { productQuerySchema, modelQuerySchema, materialQuerySchema, toolQuerySchema, createModelSchema };

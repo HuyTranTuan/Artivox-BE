@@ -8,7 +8,7 @@ const saltRound = Number(process.env.BCRYPT_SALT) || 10;
 
 // Get Admin dashboard
 async function getAdminDashboard() {
-  const [staffStats, topProducts, revenueByProductType, financialKPIs, abandonedCartStats, paymentMethodDistribution, timeSeries30Days] = await Promise.all([
+  const [staffStats, topProducts, revenueByProductType, financialKPIs, abandonedCartStats, paymentMethodDistribution, timeSeries30Days, articleStats] = await Promise.all([
     getStaffStats(),
     getTopProducts(),
     getRevenueByProductType(),
@@ -16,6 +16,7 @@ async function getAdminDashboard() {
     getAbandonedCartStats(),
     getPaymentMethodDistribution(),
     getTimeSeries30Days(),
+    getArticleStats(),
   ]);
 
   // Combine and structure the dashboard payload cleanly
@@ -23,6 +24,7 @@ async function getAdminDashboard() {
     widgets: {
       ...financialKPIs,
       ...abandonedCartStats,
+      ...articleStats,
     },
     tables: {
       topStaffByArticles: staffStats.topStaffByArticles,
@@ -374,6 +376,16 @@ async function getTimeSeries30Days() {
   });
 
   return Object.values(chartDataMap);
+}
+
+// --- HELPER 8: Article Stats ---
+async function getArticleStats() {
+  const articles = await prisma.article.aggregate({
+    where: { publishedAt: { not: null }, deletedAt: null },
+    _sum: { viewCount: true },
+  });
+
+  return { totalArticleViews: articles._sum.viewCount || 0 };
 }
 
 // Get Staff Dashboard (personal stats for individual staff member)

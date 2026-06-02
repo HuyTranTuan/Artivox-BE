@@ -10,6 +10,7 @@ async function createOrder(customerId, {
   note,
   shippingFee = 0,
   discountAmount = 0,
+  discountCode,
   paymentMethod = "BANK_TRANSFER",
   paymentStatus = "PENDING",
   deliveryDate,
@@ -53,6 +54,38 @@ async function createOrder(customerId, {
     });
   }
 
+  let appliedDiscount = null;
+  if (discountCode) {
+    const discount = await prisma.discount.findUnique({
+      where: { code: discountCode }
+    });
+    if (!discount || !discount.isActive) {
+      throw new AppError("Invalid or inactive discount code", HTTP_CODES.BAD_REQUESTED);
+    }
+    if (discount.maxUses && discount.usedCount >= discount.maxUses) {
+      throw new AppError("Discount code usage limit reached", HTTP_CODES.BAD_REQUESTED);
+    }
+    if (discount.startsAt && new Date() < discount.startsAt) {
+      throw new AppError("Discount code is not active yet", HTTP_CODES.BAD_REQUESTED);
+    }
+    if (discount.expiresAt && new Date() > discount.expiresAt) {
+      throw new AppError("Discount code has expired", HTTP_CODES.BAD_REQUESTED);
+    }
+    if (discount.minOrderAmount && itemsAmount < discount.minOrderAmount) {
+      throw new AppError(`Minimum order amount for this discount is ₫${discount.minOrderAmount}`, HTTP_CODES.BAD_REQUESTED);
+    }
+    
+    appliedDiscount = discount;
+    if (discount.type === "PERCENT") {
+      discountAmount = (itemsAmount * discount.value) / 100;
+    } else {
+      discountAmount = discount.value;
+    }
+    if (discountAmount > itemsAmount) {
+      discountAmount = itemsAmount;
+    }
+  }
+
   const totalAmount = itemsAmount + shippingFee - discountAmount + (itemsAmount * 0.1);
 
   const order = await prisma.order.create({
@@ -73,6 +106,24 @@ async function createOrder(customerId, {
     },
     include: { items: { include: { product: true } } },
   });
+
+  if (appliedDiscount) {
+    await prisma.discount.update({
+      where: { id: appliedDiscount.id },
+      data: { usedCount: { increment: 1 } }
+    });
+
+    await prisma.discountOrder.create({
+      data: {
+        code: appliedDiscount.code,
+        name: appliedDiscount.name,
+        orderId: order.id,
+        value: discountAmount,
+        startsAt: appliedDiscount.startsAt || new Date(),
+        expiresAt: appliedDiscount.expiresAt,
+      }
+    });
+  }
 
   // Send notification to admins about new order
   const admins = await prisma.adminUser.findMany({

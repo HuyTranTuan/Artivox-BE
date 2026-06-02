@@ -1,5 +1,6 @@
 const searchService = require("@services/search.service");
 const catchAsync = require("@utils/catchAsync");
+const { HTTP_CODES } = require("@/config/constants");
 
 /**
  * Global search across all product types
@@ -9,7 +10,7 @@ const globalSearch = catchAsync(async (req, res) => {
   const { q, limit, type } = req.query;
 
   if (!q) {
-    return res.badRequest("Search query 'q' is required");
+    return res.error("Search query 'q' is required", HTTP_CODES.BAD_REQUESTED);
   }
 
   const data = await searchService.searchGlobal(q, limit, type);
@@ -24,7 +25,7 @@ const searchModels = catchAsync(async (req, res) => {
   const { q, page, limit, collectionId, sortBy, sortOrder, minPrice, maxPrice } = req.query;
 
   if (!q) {
-    return res.badRequest("Search query 'q' is required");
+    return res.error("Search query 'q' is required", HTTP_CODES.BAD_REQUESTED);
   }
 
   const filters = {};
@@ -45,7 +46,7 @@ const searchMaterials = catchAsync(async (req, res) => {
   const { q, page, limit, collectionId, materialType, color, sortBy, sortOrder, minPrice, maxPrice } = req.query;
 
   if (!q) {
-    return res.badRequest("Search query 'q' is required");
+    return res.error("Search query 'q' is required", HTTP_CODES.BAD_REQUESTED);
   }
 
   const filters = {};
@@ -68,7 +69,7 @@ const searchTools = catchAsync(async (req, res) => {
   const { q, page, limit, collectionId, sortBy, sortOrder, minPrice, maxPrice } = req.query;
 
   if (!q) {
-    return res.badRequest("Search query 'q' is required");
+    return res.error("Search query 'q' is required", HTTP_CODES.BAD_REQUESTED);
   }
 
   const filters = {};
