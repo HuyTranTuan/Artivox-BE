@@ -1,6 +1,7 @@
 const { HTTP_CODES } = require("@/config/constants");
 const orderService = require("@services/order.service");
 const catchAsync = require("@utils/catchAsync");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 // Create order
 const createOrder = catchAsync(async (req, res) => {
@@ -14,6 +15,9 @@ const createOrder = catchAsync(async (req, res) => {
     customerId: userID,
     total: data.totalAmount,
   });
+
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
 
   return res.success(data, "Order created", HTTP_CODES.CREATED);
 });
@@ -36,6 +40,9 @@ const cancelOrder = catchAsync(async (req, res) => {
     orderId: data.id.toString(),
     status: data.status,
   });
+
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
 
   return res.success(data, "Order cancelled");
 });
@@ -66,6 +73,9 @@ const approveOrder = catchAsync(async (req, res) => {
     status: data.status,
   });
 
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
+
   return res.success(data, "Order approved");
 });
 
@@ -82,6 +92,9 @@ const updateOrderPaymentStatus = catchAsync(async (req, res) => {
     status: data.status,
     paymentStatus: data.paymentStatus,
   });
+
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
 
   return res.success(data, "Order payment status updated");
 });

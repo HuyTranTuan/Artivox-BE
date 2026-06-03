@@ -21,6 +21,9 @@ model AdminUser {
   orders       Order[]
   refreshTokens RefreshToken[]
   notifications Notification[]
+  internalChatRooms1 InternalChatRoom[] @relation("Participant1")
+  internalChatRooms2 InternalChatRoom[] @relation("Participant2")
+  internalChatMessages InternalChatMessage[] @relation("InternalSender")
 
   @@index([email])
   @@index([createdAt])

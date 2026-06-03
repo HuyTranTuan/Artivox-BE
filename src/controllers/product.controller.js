@@ -1,5 +1,6 @@
 const productService = require("@services/product.service");
 const catchAsync = require("@utils/catchAsync");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 const getProducts = catchAsync(async (req, res) => {
   const query = { ...req.query };
@@ -31,6 +32,9 @@ const rateProduct = catchAsync(async (req, res) => {
   const data = await productService.rateProduct(slug, rating);
   if (!data) return res.notFound();
 
+  await clearCache("products:*");
+  await clearCache("product:*");
+
   return res.success(data, "Product rated successfully");
 });
 
@@ -41,6 +45,9 @@ const updateProduct = catchAsync(async (req, res) => {
   const data = await productService.updateProduct(id, { collectionId, discountCampainId });
   if (!data) return res.notFound();
   
+  await clearCache("products:*");
+  await clearCache("product:*");
+
   return res.success(data, "Product updated successfully");
 });
 

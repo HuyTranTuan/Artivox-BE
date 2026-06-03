@@ -1,17 +1,26 @@
+/**
+ * /notifications namespace connection handler
+ *
+ * Personal rooms joined on connect:
+ *   user:ADMIN:<id>   (or user:STAFF:<id>)
+ *   user:CUSTOMER:<id>
+ *   admin_room  — shared room for all ADMIN/STAFF (unassigned chat broadcasts)
+ */
 function socketNotification(socket) {
   if (socket.user) {
-    // Targeted notifications channel for all logged-in users (customer & staff)
-    socket.join(`notification-${socket.user.id}`);
-    
-    if (["ADMIN", "STAFF"].includes(socket.user.role)) {
+    const { id, type } = socket.user;
+    const mappedRole = type === "admin" ? "STAFF" : "CUSTOMER";
+    const personalRoom = `user:${mappedRole}:${id}`;
+    socket.join(personalRoom);
+
+    if (mappedRole === "STAFF") {
       socket.join("admin_room");
-      console.log(`[Socket] ${socket.user.id} joined admin_room and notification-${socket.user.id}`);
     }
   }
 
-  socket.on("alert", (data) => {
-    console.log(data);
-  });
+  socket.on("alert", (data) => {});
+
+  socket.on("disconnect", () => {});
 }
 
 module.exports = socketNotification;

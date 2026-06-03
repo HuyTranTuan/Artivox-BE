@@ -1,6 +1,7 @@
 const toolService = require("@services/tool.service");
 const catchAsync = require("@utils/catchAsync");
 const { normalizeCatalogPagination } = require("@utils/catalogPagination");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 // Fetch all tool products
 const getTools = catchAsync(async (req, res) => {
@@ -38,6 +39,10 @@ const createTool = catchAsync(async (req, res) => {
     bodyData.isActive = false;
   }
   const data = await toolService.createTool(bodyData, req.files);
+  await clearCache("tools:*");
+  await clearCache("products:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Tool created");
 });
 
@@ -48,12 +53,22 @@ const updateTool = catchAsync(async (req, res) => {
   }
   const data = await toolService.updateTool(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
+  await clearCache("tools:*");
+  await clearCache("tool:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
   return res.success(data, "Tool updated");
 });
 
 const deleteTool = catchAsync(async (req, res) => {
   const data = await toolService.deleteTool(req.params.slug);
   if (!data) return res.notFound();
+  await clearCache("tools:*");
+  await clearCache("tool:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(null, "Tool deleted successfully");
 });
 

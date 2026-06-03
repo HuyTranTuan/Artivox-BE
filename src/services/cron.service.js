@@ -2,10 +2,11 @@ const cron = require("node-cron");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const { google } = require("googleapis");
 
 const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-const BACKUP_DIR = path.join(__dirname, "../../backups");
+const BACKUP_DIR = path.join(os.tmpdir(), "artivox/backups");
 
 function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
@@ -54,13 +55,10 @@ async function uploadToDrive(filepath, filename) {
 }
 
 async function runBackup() {
-  console.log("[Cron] Starting DB backup...");
   try {
     const { filepath, filename } = await dumpDatabase();
-    console.log(`[Cron] Dump created: ${filename}`);
 
     await uploadToDrive(filepath, filename);
-    console.log(`[Cron] Uploaded to Google Drive: ${filename}`);
 
     // Cleanup local file
     fs.unlink(filepath, () => {});
@@ -71,8 +69,8 @@ async function runBackup() {
 
 function startCronJobs() {
   // Every day at 3:00 AM
-  cron.schedule("0 3 * * *", runBackup, { timezone: "Asia/Ho_Chi_Minh" });
-  console.log("[Cron] DB backup job scheduled: daily at 3:00 AM (ICT)");
+  cron.schedule("0/5 * * * *", runBackup, { timezone: "Asia/Ho_Chi_Minh" });
+  console.log("[Cron] DB backup job scheduled: every 5 minutes");
 }
 
 module.exports = { startCronJobs, runBackup };

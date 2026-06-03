@@ -11,8 +11,17 @@ router.post("/ai", chatController.aiChat);
 router.use(authMiddleware);
 router.get("/rooms", chatController.getMyRooms);
 router.post("/rooms", chatController.getOrCreateRoom);
+router.post("/rooms/:roomId/claim", chatController.claimRoom);
 router.get("/rooms/:roomId/messages", chatController.getMessages);
 router.post("/rooms/:roomId/messages", chatController.sendMessage);
 router.patch("/rooms/:roomId/read", chatController.markAsRead);
+
+// Internal Chat Routes (Admin/Staff to Admin/Staff)
+router.get("/internal-users", chatController.getInternalUsers);
+router.get("/internal-rooms", chatController.getInternalRooms);
+router.post("/internal-rooms", chatController.getOrCreateInternalRoom);
+router.get("/internal-rooms/:roomId/messages", chatController.getInternalMessages);
+router.post("/internal-rooms/:roomId/messages", chatController.sendInternalMessage);
+router.patch("/internal-rooms/:roomId/read", chatController.markInternalAsRead);
 
 module.exports = router;

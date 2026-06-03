@@ -2,7 +2,7 @@ const { prisma } = require("@libs/prisma");
 
 // Create notification
 async function createNotification(recipientId, recipientType, { type, title, message, metadata }) {
-  const isAdmin = recipientType === "ADMIN";
+  const isAdmin = recipientType === "ADMIN" || recipientType === "STAFF";
   return prisma.notification.create({
     data: {
       type,
@@ -17,7 +17,7 @@ async function createNotification(recipientId, recipientType, { type, title, mes
 
 // Get notifications for user/admin
 async function getNotifications(recipientId, recipientType, { limit = 20, offset = 0, isRead } = {}) {
-  const isAdmin = recipientType === "ADMIN";
+  const isAdmin = recipientType === "ADMIN" || recipientType === "STAFF";
   const where = {
     adminId: isAdmin ? BigInt(recipientId) : null,
     customerId: !isAdmin ? BigInt(recipientId) : null,
@@ -34,7 +34,7 @@ async function getNotifications(recipientId, recipientType, { limit = 20, offset
 
 // Get unread count
 async function getUnreadCount(recipientId, recipientType) {
-  const isAdmin = recipientType === "ADMIN";
+  const isAdmin = recipientType === "ADMIN" || recipientType === "STAFF";
   return prisma.notification.count({
     where: {
       adminId: isAdmin ? BigInt(recipientId) : null,
@@ -57,7 +57,7 @@ async function markAsRead(notificationId) {
 
 // Mark multiple as read
 async function markMultipleAsRead(recipientId, recipientType) {
-  const isAdmin = recipientType === "ADMIN";
+  const isAdmin = recipientType === "ADMIN" || recipientType === "STAFF";
   return prisma.notification.updateMany({
     where: {
       adminId: isAdmin ? BigInt(recipientId) : null,
@@ -99,6 +99,31 @@ async function notifyStaffNewMessage(chatRoomId, message, io) {
   }
 }
 
+// Mark chat notifications as read
+async function markChatNotificationsAsRead(chatRoomId, recipientId, recipientType) {
+  const isAdmin = recipientType === "ADMIN" || recipientType === "STAFF";
+  
+  const notifications = await prisma.notification.findMany({
+    where: {
+      adminId: isAdmin ? BigInt(recipientId) : null,
+      customerId: !isAdmin ? BigInt(recipientId) : null,
+      type: "CHAT_MESSAGE",
+      isRead: false,
+    }
+  });
+
+  const idsToMark = notifications
+    .filter(n => n.metadata && String(n.metadata.chatRoomId) === String(chatRoomId))
+    .map(n => n.id);
+
+  if (idsToMark.length > 0) {
+    return prisma.notification.updateMany({
+      where: { id: { in: idsToMark } },
+      data: { isRead: true, readAt: new Date() },
+    });
+  }
+}
+
 module.exports = {
   createNotification,
   getNotifications,
@@ -109,4 +134,5 @@ module.exports = {
   deleteNotification,
   notifyStaffOrderCreated,
   notifyStaffNewMessage,
+  markChatNotificationsAsRead,
 };

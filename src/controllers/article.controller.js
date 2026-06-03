@@ -1,5 +1,6 @@
 const articleService = require("@services/article.service");
 const catchAsync = require("@utils/catchAsync");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 const getArticles = catchAsync(async (req, res) => {
   const data = await articleService.getArticles();
@@ -13,16 +14,30 @@ const getArticleBySlug = catchAsync(async (req, res) => {
 
 const createArticle = catchAsync(async (req, res) => {
   const data = await articleService.createArticle(req.user.id, req.body, req.files);
+  await clearCache("articles:*");
+  await clearCache("articles_locale:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Article created", 201);
 });
 
 const updateArticle = catchAsync(async (req, res) => {
   const data = await articleService.updateArticle(req.params.slug, req.user, req.body, req.files);
+  await clearCache("articles:*");
+  await clearCache("article:*");
+  await clearCache("articles_locale:*");
+  await clearCache("article_locale:*");
   return res.success(data, "Article updated");
 });
 
 const deleteArticle = catchAsync(async (req, res) => {
   await articleService.deleteArticle(req.params.slug, req.user.id);
+  await clearCache("articles:*");
+  await clearCache("article:*");
+  await clearCache("articles_locale:*");
+  await clearCache("article_locale:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(null, "Article deleted");
 });
 
@@ -43,6 +58,14 @@ const approveArticle = catchAsync(async (req, res) => {
   const { articleId } = req.params;
   const data = await articleService.approveArticle(BigInt(articleId), req.user.id);
   if (!data) return res.notFound();
+  
+  await clearCache("articles:*");
+  await clearCache("article:*");
+  await clearCache("articles_locale:*");
+  await clearCache("article_locale:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
+  
   return res.success(data, "Article approved");
 });
 

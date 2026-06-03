@@ -1,6 +1,8 @@
 const authService = require("@services/auth.service");
 const catchAsync = require("@utils/catchAsync");
+const { prisma } = require("@libs/prisma");
 const isProduction = require("@utils/isProduction");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 function writeRefreshTokenCookie(res, refreshToken) {
   if (!refreshToken) return;
@@ -34,6 +36,8 @@ const adminLogin = catchAsync(async (req, res) => {
 ///////////// User Auth //////////////
 const customerRegister = catchAsync(async (req, res) => {
   const data = await authService.customerRegister(req.body);
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return sendAuthResponse(res, data, "Registration successful", 201);
 });
 
@@ -116,6 +120,26 @@ const resetPassword = catchAsync(async (req, res) => {
   return res.success(data, data.message);
 });
 
+
+const getMe = catchAsync(async (req, res) => {
+  const { id, type } = req.user;
+  if (type === "admin") {
+    const user = await prisma.adminUser.findFirst({
+      where: { id: BigInt(id), deletedAt: null },
+      select: { id: true, email: true, fullName: true, role: true, permission: true, phone: true, avatar: true, createdAt: true },
+    });
+    if (!user) return res.error("Not found", 404);
+    return res.success({ ...user, id: user.id.toString() }, "Profile fetched");
+  } else {
+    const user = await prisma.customer.findFirst({
+      where: { id: BigInt(id), deletedAt: null },
+      select: { id: true, email: true, fullName: true, phone: true, gender: true, avatar: true, slug: true, verifiedAt: true, dateOfBirth: true, createdAt: true },
+    });
+    if (!user) return res.error("Not found", 404);
+    return res.success({ ...user, id: user.id.toString() }, "Profile fetched");
+  }
+});
+
 module.exports = {
   adminLogin,
   customerRegister,
@@ -130,4 +154,5 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerifyEmail,
+  getMe,
 };

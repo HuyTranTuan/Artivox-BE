@@ -16,7 +16,7 @@ async function getCustomers() {
       verifiedAt: true,
       createdAt: true,
     },
-    orderBy: { createdAt: "desc", deletedAt: null },
+    orderBy: { createdAt: "desc" },
   });
 }
 

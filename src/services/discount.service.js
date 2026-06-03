@@ -3,6 +3,28 @@ const { prisma } = require("@libs/prisma");
 // Fetch active discounts (public)
 async function getDiscounts() {
   return prisma.discount.findMany({
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      slug: true,
+      type: true,
+      value: true,
+      minOrderAmount: true,
+      maxUses: true,
+      isActive: true,
+      startsAt: true,
+      expiresAt: true,
+      products: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          basePrice: true,
+          discountedPrice: true,
+        },
+      },
+    },
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
@@ -11,8 +33,29 @@ async function getDiscounts() {
 // Fetch all discounts (admin — regardless of isActive)
 async function getDiscountsAdmin() {
   return prisma.discount.findMany({
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      slug: true,
+      type: true,
+      value: true,
+      minOrderAmount: true,
+      maxUses: true,
+      isActive: true,
+      startsAt: true,
+      expiresAt: true,
+      products: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          basePrice: true,
+          discountedPrice: true,
+        },
+      },
+    },
     where: {},
-    include: { _count: { select: { products: true } } },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -21,7 +64,28 @@ async function getDiscountsAdmin() {
 async function getDiscountBySlug(slug) {
   return prisma.discount.findFirst({
     where: { slug },
-    include: { products: { where: { deletedAt: null }, select: { id: true, name: true, slug: true, basePrice: true, discountedPrice: true } } },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      slug: true,
+      type: true,
+      value: true,
+      minOrderAmount: true,
+      maxUses: true,
+      isActive: true,
+      startsAt: true,
+      expiresAt: true,
+      products: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          basePrice: true,
+          discountedPrice: true,
+        },
+      },
+    },
   });
 }
 
@@ -51,10 +115,10 @@ async function updateDiscount(slug, data) {
   return prisma.discount.update({
     where: { id: existing.id },
     data: {
-      ...(data.code && { code: data.code }),
-      ...(data.name && { name: data.name }),
-      ...(data.slug && { slug: data.slug }),
-      ...(data.type && { type: data.type }),
+      ...(data.code !== undefined && { code: data.code }),
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.slug !== undefined && { slug: data.slug }),
+      ...(data.type !== undefined && { type: data.type }),
       ...(data.value !== undefined && { value: parseFloat(data.value) }),
       ...(data.minOrderAmount !== undefined && { minOrderAmount: data.minOrderAmount ? parseFloat(data.minOrderAmount) : null }),
       ...(data.maxUses !== undefined && { maxUses: data.maxUses ? parseInt(data.maxUses, 10) : null }),

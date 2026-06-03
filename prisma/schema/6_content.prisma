@@ -41,14 +41,14 @@ model ArticleTranslation {
 
 model ChatRoom {
   id         BigInt   @id @default(autoincrement())
-  adminId    BigInt
+  adminId    BigInt?
   customerId BigInt
   isActive   Boolean  @default(true)
   
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  admin    AdminUser     @relation(fields: [adminId], references: [id])
+  admin    AdminUser?    @relation(fields: [adminId], references: [id])
   customer Customer      @relation(fields: [customerId], references: [id])
   messages ChatMessage[]
 
@@ -104,4 +104,44 @@ model Notification {
   @@index([createdAt])
   @@index([isRead])
   @@map("notifications")
+}
+
+// ─── Internal Chat System (Admin to Admin/Staff) ─────
+
+model InternalChatRoom {
+  id             BigInt   @id @default(autoincrement())
+  participant1Id BigInt
+  participant2Id BigInt
+  isActive       Boolean  @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  participant1 AdminUser @relation("Participant1", fields: [participant1Id], references: [id])
+  participant2 AdminUser @relation("Participant2", fields: [participant2Id], references: [id])
+  messages     InternalChatMessage[]
+
+  @@unique([participant1Id, participant2Id])
+  @@index([participant1Id])
+  @@index([participant2Id])
+  @@map("internal_chat_rooms")
+}
+
+model InternalChatMessage {
+  id         BigInt   @id @default(autoincrement())
+  roomId     BigInt
+  senderId   BigInt
+  content    String
+  fileUrl    String?
+  fileType   String?
+  isRead     Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  room   InternalChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender AdminUser        @relation("InternalSender", fields: [senderId], references: [id])
+
+  @@index([roomId])
+  @@index([createdAt])
+  @@map("internal_chat_messages")
 }

@@ -2,6 +2,7 @@ const { HTTP_CODES } = require("@/config/constants");
 const adminService = require("@services/admin.service");
 const imageService = require("@services/image.service");
 const catchAsync = require("@utils/catchAsync");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 const getAdminDashboard = catchAsync(async (req, res) => {
   const data = await adminService.getAdminDashboard();
@@ -27,6 +28,8 @@ const getCustomer = catchAsync(async (req, res) => {
 const getCustomerBanned = catchAsync(async (req, res) => {
   const { slug } = req.params;
   const data = await adminService.getCustomerBanned(slug);
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Updated Successfully!", HTTP_CODES.OK);
 });
 
@@ -43,6 +46,8 @@ const getAdminRevenue = catchAsync(async (req, res) => {
 const updateOrderStatus = catchAsync(async (req, res) => {
   const { status, assignedAdminId } = req.body;
   const data = await adminService.updateOrderStatus(req.params.id, status, assignedAdminId);
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Update Successed!", HTTP_CODES.OK);
 });
 

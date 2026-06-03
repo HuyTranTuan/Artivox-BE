@@ -90,12 +90,14 @@ model AdminUser {
   password   String    @db.VarChar(100)
   fullName   String    @db.VarChar(100)
   phone      String    @unique @db.VarChar(15)
-  avatar     String?   @db.VarChar(100)
+  avatar     String?   @db.VarChar(512)
   role       AdminRole @default(STAFF)
   permission String    @default("{create:false,update:false,del:false}")
   createdAt  DateTime  @default(now()) @db.Timestamp
   updatedAt  DateTime  @default(now()) @updatedAt @db.Timestamp
   deletedAt  DateTime? @db.Timestamp
+  resetToken       String?   @db.VarChar(128)
+  resetTokenExpiry DateTime? @db.Timestamp
 
   articles     Article[]
   chatRooms    ChatRoom[]
@@ -118,13 +120,15 @@ model Customer {
   fullName                String?
   phone                   String?
   address                 String?
-  avatar                  String?   @db.VarChar(100)
+  avatar                  String?   @db.VarChar(512)
   dateOfBirth             DateTime?
   gender                  Gender?
   slug                    String    @unique
   verifiedAt              DateTime?
   verificationToken       String?
   verificationTokenExpiry DateTime?
+  resetToken              String?   @db.VarChar(128)
+  resetTokenExpiry        DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @default(now()) @updatedAt
   deletedAt               DateTime?
@@ -388,6 +392,7 @@ model Article {
   authorId    BigInt
   coverImage  String?
   publishedAt DateTime?
+  viewCount   Int       @default(0)
   
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -510,133 +515,4 @@ model RefreshToken {
   @@index([customerId])
   @@index([adminId])
   @@map("refresh_tokens")
-}
-
-// ─── Reviews (Multi-language) ────────────────────
-
-model Review {
-  id        BigInt    @id @default(autoincrement())
-  productId BigInt
-  customerId BigInt
-  rating    Float     @db.Float
-  comment   String?   @db.Text
-  isApproved Boolean   @default(false)
-  
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-
-  product Product  @relation(fields: [productId], references: [id])
-  customer Customer @relation(fields: [customerId], references: [id])
-
-  @@index([productId])
-  @@index([customerId])
-  @@index([rating])
-  @@map("reviews")
-}
-
-model ReviewTranslation {
-  id        BigInt   @id @default(autoincrement())
-  reviewId  BigInt
-  locale    String   @db.VarChar(10)
-  title     String?
-  content   String   @db.Text
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-
-  @@unique([reviewId, locale])
-  @@index([locale])
-  @@map("review_translations")
-}
-
-// ─── Favorites ───────────────────────────────────────
-
-model Favorite {
-  id         BigInt   @id @default(autoincrement())
-  customerId BigInt
-  productId  BigInt
-  
-  createdAt DateTime @default(now())
-
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([customerId, productId])
-  @@index([customerId])
-  @@index([productId])
-  @@map("favorites")
-}
-
-// ─── Customer Support Tickets ───────────────────────
-
-model SupportTicket {
-  id        BigInt         @id @default(autoincrement())
-  orderId   BigInt?
-  customerId BigInt
-  adminId    BigInt?
-  type      TicketType
-  subject   String
-  status    TicketStatus   @default(OPEN)
-  priority  TicketPriority @default(MEDIUM)
-  description String?
-  
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now()) @updatedAt
-
-  order    Order?   @relation(fields: [orderId], references: [id])
-  customer Customer @relation(fields: [customerId], references: [id])
-  admin    AdminUser? @relation(fields: [adminId], references: [id])
-  messages SupportTicketMessage[]
-
-  @@index([orderId])
-  @@index([customerId])
-  @@index([adminId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("support_tickets")
-}
-
-model SupportTicketMessage {
-  id         BigInt   @id @default(autoincrement())
-  ticketId   BigInt
-  senderType TicketSenderType
-  content    String
-  fileUrl    String?
-  fileType   String?
-  
-  createdAt DateTime @default(now())
-
-  ticket   SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  admin    AdminUser?    @relation(fields: [adminId], references: [id])
-  customer Customer?     @relation(fields: [customerId], references: [id])
-
-  @@index([ticketId])
-  @@index([createdAt])
-  @@map("support_ticket_messages")
-}
-
-// ─── System Logs ─────────────────────────────────────
-
-model AuditLog {
-  id         BigInt   @id @default(autoincrement())
-  adminId    BigInt?
-  action     String   // e.g., "create", "update", "delete", "login"
-  resourceType String
-  resourceId   String
-  oldValue     Json?
-  newValue     Json?
-  description  String?
-  ipAddress    String?
-  userAgent    String?
-  
-  createdAt DateTime @default(now())
-
-  admin AdminUser? @relation(fields: [adminId], references: [id])
-
-  @@index([adminId])
-  @@index([resourceType])
-  @@index([createdAt])
-  @@map("audit_logs")
 }

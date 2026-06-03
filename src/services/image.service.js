@@ -140,8 +140,40 @@ async function uploadAvatarImage(avatarStr, userId, userType) {
   return buildPublicUrl(key);
 }
 
+async function uploadChatAttachment(base64Str, fileName, mimeType, chatRoomId) {
+  if (!base64Str || !base64Str.startsWith("data:")) return base64Str; // Already a URL or null
+
+  const matches = base64Str.match(/^data:(.+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    throw new AppError("Invalid file format", HTTP_CODES.BAD_REQUESTED);
+  }
+
+  const actualMimeType = matches[1];
+  const buffer = Buffer.from(matches[2], "base64");
+  
+  const bucket = getBucketName();
+  const ts = Date.now();
+  const safeName = normalizeFileName(fileName);
+  const ext = path.extname(fileName) || (actualMimeType.split("/")[1] === "plain" ? ".txt" : "");
+  
+  const key = `chat-attachments/room-${String(chatRoomId)}/${ts}-${safeName}${ext}`;
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: actualMimeType || mimeType || "application/octet-stream",
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+
+  return buildPublicUrl(key);
+}
+
 module.exports = {
   STAFF_IMAGE_VARIANTS,
   uploadStaffImage,
   uploadAvatarImage,
+  uploadChatAttachment,
 };

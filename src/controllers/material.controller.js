@@ -1,6 +1,7 @@
 const materialService = require("@services/material.service");
 const catchAsync = require("@utils/catchAsync");
 const { normalizeCatalogPagination } = require("@utils/catalogPagination");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 // Fetch all material products
 const getMaterials = catchAsync(async (req, res) => {
@@ -38,6 +39,10 @@ const createMaterial = catchAsync(async (req, res) => {
     bodyData.isActive = false;
   }
   const data = await materialService.createMaterial(bodyData, req.files);
+  await clearCache("materials:*");
+  await clearCache("products:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Material created");
 });
 
@@ -48,12 +53,22 @@ const updateMaterial = catchAsync(async (req, res) => {
   }
   const data = await materialService.updateMaterial(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
+  await clearCache("materials:*");
+  await clearCache("material:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
   return res.success(data, "Material updated");
 });
 
 const deleteMaterial = catchAsync(async (req, res) => {
   const data = await materialService.deleteMaterial(req.params.slug);
   if (!data) return res.notFound();
+  await clearCache("materials:*");
+  await clearCache("material:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(null, "Material deleted successfully");
 });
 

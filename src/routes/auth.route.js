@@ -23,6 +23,9 @@ router.post("/refresh-token", authController.refreshToken);
 // Logout - works for both admin and customer
 router.post("/logout", authMiddleware, authController.logout);
 
+// Get current user profile
+router.get("/me", authMiddleware, authController.getMe);
+
 // Update account information
 router.patch("/admin/account", authMiddleware, authController.updateAdminAccount);
 router.patch("/customer/account", authMiddleware, authController.updateCustomerAccount);

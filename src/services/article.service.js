@@ -144,9 +144,9 @@ async function approveArticle(articleId, adminId) {
     include: { translations: true, author: { select: { id: true, fullName: true } } },
   });
 
-  // Send notification to author
+  // Send notification to author (staff)
   const title = updated.translations?.[0]?.title || "Your Article";
-  await notificationService.createNotification(article.author.id, "CUSTOMER", {
+  await notificationService.createNotification(article.author.id, "ADMIN", {
     type: "ARTICLE_APPROVED",
     title: "Article Approved",
     message: `Your article "${title}" has been approved and published`,

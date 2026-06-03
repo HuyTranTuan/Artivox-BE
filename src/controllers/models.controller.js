@@ -1,6 +1,7 @@
 const modelsService = require("@services/models.service");
 const catchAsync = require("@utils/catchAsync");
 const { normalizeCatalogPagination } = require("@utils/catalogPagination");
+const { clearCache } = require("@middlewares/cache.middleware");
 
 // Fetch all model products
 const getModels = catchAsync(async (req, res) => {
@@ -38,6 +39,10 @@ const createModel = catchAsync(async (req, res) => {
     bodyData.isActive = false;
   }
   const data = await modelsService.createModel(bodyData, req.files);
+  await clearCache("models:*");
+  await clearCache("products:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Model created");
 });
 
@@ -48,12 +53,22 @@ const updateModel = catchAsync(async (req, res) => {
   }
   const data = await modelsService.updateModel(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
+  await clearCache("models:*");
+  await clearCache("model:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
   return res.success(data, "Model updated");
 });
 
 const deleteModel = catchAsync(async (req, res) => {
   const data = await modelsService.deleteModel(req.params.slug);
   if (!data) return res.notFound();
+  await clearCache("models:*");
+  await clearCache("model:*");
+  await clearCache("products:*");
+  await clearCache("product:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(null, "Model deleted successfully");
 });
 
