@@ -1,61 +1,37 @@
 # Active Context
 
-## Project
-
-Artivox-BE backend.
-
-- Node.js + Express
-- Prisma + PostgreSQL
-- JWT auth
-- Zod validation
-- Socket.io
+**Updated:** Jun 4, 2026
 
 ## Current Focus
 
-- Stabilize catalog GET routes under `/api/v1/catalog/*`
-- Keep list endpoints consistent with `search`, `limit`, `skip`
-- Enforce small-page pagination for catalog resources
-- Clean stale memory-bank notes and backend rules
+- All core features implemented and stable
+- Chat: customer support + internal staff-to-staff + AI standalone
+- Order payment status update endpoint added
 
 ## Hot Paths
 
-- `src/routes/index.js`
-- `src/routes/catalog.route.js`
-- `src/routes/article.route.js`
-- `src/routes/location.route.js`
-- `src/controllers/*.controller.js`
-- `src/services/*.service.js`
-- `src/validators/*.validator.js`
-- `src/middlewares/response.middleware.js`
+- `src/routes/index.js` — route registration
+- `src/routes/chat.route.js` — room claim, internal chat
+- `src/controllers/chat.controller.js` — largest controller (12KB)
+- `src/controllers/admin.controller.js` — dashboard, revenue
+- `src/services/*.service.js` — business logic
+- `src/middlewares/auth.middleware.js` — authMiddleware, restrictTo, optionalAuth
 
-## Current Backend Rules
+## Rules
 
-- Route -> middleware -> controller -> service -> Prisma
-- Use CommonJS only
-- Use aliases from `jsconfig.json`
-- Soft delete filter: `deletedAt: null`
-- Keep controllers thin
-- Put business logic in services
+- Route → controller → service → Prisma (CommonJS)
+- Soft delete: `deletedAt: null`
+- Controllers thin — logic in services
+- Use `@` aliases from `jsconfig.json`
+- Rate limiting on auth routes via `authLimiter`
+- Cache middleware: `cacheMiddleware(key, ttl)` on GET catalog routes
+
+## Base API
+
+- Dev: `http://localhost:3000/api`
+- Catalog list params: `?search=&limit=10&skip=0&isActive=true`
 
 ## Next Tasks
 
-- Verify catalog list routes return valid paginated data
-- Fix any route mount mismatch causing 404
-- Clean broken validators without changing unrelated logic
-- Audit memory-bank files for stale FE content
-- Keep `RULES.md`, `STATE.md`, `ARCH.md` aligned
-
-## Known Risks
-
-- `catalog.validator.js` is stale/broken
-- Memory-bank had FE notes inside BE project
-- State docs mention pending schema and search work
-
-## Notes
-
-- Base API: `http://localhost:3000/api/v1`
-- Catalog list target:
-  - `/catalog/collections?search=&limit=10&skip=0`
-  - `/catalog/models?search=&limit=10&skip=0`
-  - `/catalog/materials?search=&limit=10&skip=0`
-  - `/catalog/tools?search=&limit=10&skip=0`
+- Performance: audit slow queries
+- Deployment prep

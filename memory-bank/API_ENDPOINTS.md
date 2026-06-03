@@ -1,100 +1,100 @@
-content = """# API ENDPOINTS - CAVEMAN EDITION
+# API ENDPOINTS
 
-**BASE:** `http://localhost:3000/api`  
-**LOCK:** Put `Authorization: Bearer <accessToken>` in head. Use `Cookie: refreshToken=<token>` for new tokens.
+**BASE:** `http://localhost:3000/api`
+**AUTH:** `Authorization: Bearer <accessToken>`
 
----
-
-## 🔐 AUTH (PROVE WHO YOU ARE)
-
-- `POST /auth/customer/register` ── **In:** email, password, fullName ── **Out:** user, tokens
-- `POST /auth/customer/login` ── **In:** email, password ── **Out:** user, tokens
-- `POST /auth/admin/login` ── **In:** email, password ── **Out:** user, tokens
-- `POST /auth/refresh-token` ── **In:** cookie/header ── **Out:** tokens
-- `POST /auth/logout` `[Lock]` ── **Out:** logout msg
-- `PATCH /auth/admin/account` `[Lock: Admin]` ── **In:** fullName?, email?, phone?, address? ── **Out:** Admin data
-- `PATCH /auth/customer/account` `[Lock: Customer]` ── **In:** fullName?, email?, phone?, address?, password? ── **Out:** Customer data
+Same content as Artivox-Admin/memory-bank/API_ENDPOINTS.md — single source of truth.
+See that file for the full table.
 
 ---
 
-## 📦 CATALOG (THINGS TO BUY)
+## Quick Ref
 
-- `GET /catalog/models` `[Ask: ?search&limit&skip]` ── **Out:** Models list
-- `GET /catalog/models/:slug` ── **Out:** One Model details
-- `GET /catalog/materials` `[Ask: ?type&limit&skip]` ── **Out:** Materials list
-- `GET /catalog/materials/:slug` ── **Out:** One Material
-- `GET /catalog/tools` `[Ask: ?limit&skip]` ── **Out:** Tools list
-- `GET /catalog/tools/:slug` ── **Out:** One Tool
-- `GET /catalog/products` `[Ask: ?type&search&limit&skip]` ── **Out:** Products list
-- `GET /catalog/products/:slug` ── **Out:** One Product
-- `GET /catalog/collections` ── **Out:** Collections list
-- `GET /catalog/collections/:id` ── **Out:** One Collection + Products
+```
+/auth                   → customer/admin auth + OAuth
+/admin                  → admin/staff management, dashboard
+/catalog/models         → CRUD (admin) + GET (public)
+/catalog/materials      → CRUD (admin) + GET (public)
+/catalog/tools          → CRUD (admin) + GET (public)
+/catalog/products       → GET + PATCH (collection/discount assign) + rate
+/catalog/collections    → CRUD (admin) + GET (public)
+/cart                   → user cart (all auth)
+/orders                 → order lifecycle
+/articles               → CMS multi-lang CRUD
+/chat                   → rooms, messages, AI, internal staff
+/discounts              → discount campaigns CRUD
+/discount_orders        → discount order records
+/notifications          → notification CRUD
+/search                 → global + models/materials/tools typed
+/customers              → customer lookup
+/customer-activity-log  → activity logs
+/location               → provinces, wards
+```
 
----
+## Auth Details
 
-## 🛒 SHOPPING (CART & DISCOUNTS)
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/auth/customer/register` | email, password, fullName |
+| POST | `/auth/customer/login` | email, password |
+| POST | `/auth/admin/login` | email, password |
+| POST | `/auth/refresh-token` | cookie or header |
+| POST | `/auth/logout` | auth required |
+| GET | `/auth/me` | current user |
+| PATCH | `/auth/admin/account` | auth required |
+| PATCH | `/auth/customer/account` | auth required |
+| PATCH | `/auth/admin/change-password` | auth required |
+| PATCH | `/auth/customer/change-password` | auth required |
+| POST | `/auth/forgot-password` | rate limited |
+| POST | `/auth/reset-password` | token + newPassword |
+| POST | `/auth/verify-email` | token |
+| POST | `/auth/resend-verify-email` | email |
+| GET | `/auth/customer/google` | OAuth redirect |
+| GET | `/auth/customer/google/callback` | OAuth callback |
 
-- `GET /cart` `[Lock]` ── **Out:** Cart items
-- `POST /cart/add` `[Lock]` ── **In:** productId, quantity ── **Out:** Item data
-- `PATCH /cart/:cartItemId` `[Lock]` ── **In:** quantity ── **Out:** Fresh item data
-- `DELETE /cart/:cartItemId` `[Lock]` ── **Out:** Delete msg
-- `GET /discounts` ── **Out:** All discounts
-- `GET /discounts/:slug` ── **Out:** One discount
+## Chat Endpoints
 
----
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/chat/ai` | No auth — AI reply |
+| GET | `/chat/rooms` | auth |
+| POST | `/chat/rooms` | auth |
+| POST | `/chat/rooms/:roomId/claim` | auth — staff claim room |
+| GET | `/chat/rooms/:roomId/messages` | auth |
+| POST | `/chat/rooms/:roomId/messages` | auth |
+| PATCH | `/chat/rooms/:roomId/read` | auth |
+| GET | `/chat/internal-users` | auth |
+| GET | `/chat/internal-rooms` | auth |
+| POST | `/chat/internal-rooms` | auth |
+| GET | `/chat/internal-rooms/:roomId/messages` | auth |
+| POST | `/chat/internal-rooms/:roomId/messages` | auth |
+| PATCH | `/chat/internal-rooms/:roomId/read` | auth |
 
-## 📋 ORDERS (BUY NOW)
+## Order Endpoints
 
-- `POST /orders` `[Lock]` ── **In:** shippingAddress ── **Out:** Order info `[Boom: Admin get notify]`
-- `GET /orders/me` `[Lock]` ── **Out:** My orders
-- `GET /orders` `[Lock: Admin]` ── **Out:** All orders
-- `GET /orders/:orderId` ── **Out:** Order detail
-- `POST /orders/:orderId/cancel` `[Lock]` ── **Out:** Cancelled order
-- `PATCH /orders/:orderId/approve` `[Lock: Admin]` ── **Out:** Done order `[Boom: Customer get notify]`
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/orders` | public |
+| POST | `/orders` | auth |
+| GET | `/orders/me` | auth |
+| GET | `/orders/:orderId` | public |
+| POST | `/orders/:orderId/cancel` | auth |
+| PATCH | `/orders/:orderId/approve` | auth |
+| PATCH | `/orders/:orderId/payment-status` | auth |
 
----
+## Admin Endpoints
 
-## 📰 ARTICLES (WORDS ON STONE)
-
-- `GET /articles` ── **Out:** All articles
-- `GET /articles/:slug` ── **Out:** One article multi-lang
-- `GET /articles/:lang` OR `/:lang/:slug` `(lang = vi/en)` ── **Out:** Safe published text
-- `POST /articles` `[Lock: Admin/Staff]` ── **In:** slug, coverImage, translations ── **Out:** New article `[Boom: Admin get notify]`
-- `PUT /articles/:slug` `[Lock: Owner]` ── **In:** coverImage?, translations? ── **Out:** Fixed article
-- `DELETE /articles/:slug` `[Lock: Owner]` ── **Out:** Article gone
-- `PATCH /articles/:articleId/approve` `[Lock: Manager]` ── **Out:** Live article `[Boom: Author get notify]`
-
----
-
-## 💬 CHAT (UGGA BUGGA TALK)
-
-- `GET /chat/rooms` `[Lock]` ── **Out:** Rooms + last talk
-- `POST /chat/rooms` `[Lock: Admin]` ── **In:** customerId ── **Out:** Active room
-- `GET /chat/:roomId/messages` `[Lock]` ── **Out:** Old talk messages
-- `POST /chat/:roomId/message` `[Lock]` ── **In:** content, fileUrl?, fileType? ── **Out:** New message `[Boom: Recipient get notify]`
-- `PATCH /chat/:roomId/read` `[Lock]` ── **Out:** Read success
-
----
-
-## 🔔 NOTIFICATIONS (LOUD NOISES)
-
-- `GET /notifications` `[Lock]` `[Ask: ?limit&offset&isRead]` ── **Out:** Loud noises list
-- `GET /notifications/unread-count` `[Lock]` ── **Out:** Unread count number
-- `GET /notifications/:id` `[Lock]` ── **Out:** Noise detail
-- `PATCH /notifications/:id/read` `[Lock]` ── **Out:** Read true
-- `PATCH /notifications/read-all` `[Lock]` ── **Out:** All read success
-- `DELETE /notifications/:id` `[Lock]` ── **Out:** Noise gone
-
----
-
-## 👥 USERS (TRIBE PEOPLE)
-
-- `GET /customers` ── **Out:** Tribe list
-- `GET /customers/:slug` ── **Out:** One tribe person info
-- `GET /customer-activity-log` `[Lock]` ── **Out:** What person did log
-
----
-
-## 🛡️ BAD THINGS (ERROR SHIELD)
-
-If smash code, server throw:
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/admin/staff/dashboard` | any auth |
+| POST | `/admin/staff/upload-image` | ADMIN/MANAGER/STAFF |
+| GET | `/admin/dashboard` | ADMIN only |
+| GET | `/admin/users` | ADMIN |
+| GET | `/admin/customers` | ADMIN |
+| GET | `/admin/customers/:slug` | ADMIN |
+| PATCH | `/admin/customers/:slug/banned` | ADMIN |
+| GET | `/admin/orders` | ADMIN |
+| PATCH | `/admin/orders/:id` | ADMIN |
+| GET | `/admin/revenue` | ADMIN |
+| POST | `/admin/staff-create` | ADMIN |
+| PATCH | `/admin/staff-decentralize/:email` | ADMIN |
