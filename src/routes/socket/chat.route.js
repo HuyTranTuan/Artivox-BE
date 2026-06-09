@@ -25,21 +25,24 @@ function socketChat(socket) {
   // Client opens a chat room → subscribe
   socket.on("room:join", ({ chatRoomId }) => {
     if (!chatRoomId) return;
-    const room = chatRoomId.startsWith("internal:") ? `room:${chatRoomId}` : `room:chat:${chatRoomId}`;
+    const cid = String(chatRoomId);
+    const room = cid.startsWith("internal:") ? `room:${cid}` : `room:chat:${cid}`;
     socket.join(room);
   });
 
   // Client closes/leaves a chat room
   socket.on("room:leave", ({ chatRoomId }) => {
     if (!chatRoomId) return;
-    const room = chatRoomId.startsWith("internal:") ? `room:${chatRoomId}` : `room:chat:${chatRoomId}`;
+    const cid = String(chatRoomId);
+    const room = cid.startsWith("internal:") ? `room:${cid}` : `room:chat:${cid}`;
     socket.leave(room);
   });
 
   // Typing indicator — forward to everyone else in the room
   socket.on("chat:typing", ({ chatRoomId, senderType }) => {
     if (!chatRoomId) return;
-    const room = chatRoomId.startsWith("internal:") ? `room:${chatRoomId}` : `room:chat:${chatRoomId}`;
+    const cid = String(chatRoomId);
+    const room = cid.startsWith("internal:") ? `room:${cid}` : `room:chat:${cid}`;
     socket
       .to(room)
       .emit("chat:typing", { senderType });

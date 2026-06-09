@@ -43,7 +43,7 @@ async function getAdminDashboard() {
 async function getAdminUsers() {
   return prisma.adminUser.findMany({
     where: { deletedAt: null, role: "STAFF" },
-    select: { id: true, email: true, fullName: true, phone: true, createdAt: true, updatedAt: true },
+    select: { id: true, email: true, fullName: true, phone: true, role: true, permission: true, avatar: true, createdAt: true, updatedAt: true },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -395,7 +395,7 @@ async function getStaffDashboard(staffId) {
   // Fetch staff member info
   const staff = await prisma.adminUser.findFirst({
     where: { id: staffIdBig, deletedAt: null },
-    select: { id: true, email: true, fullName: true, phone: true, role: true, createdAt: true },
+    select: { id: true, email: true, fullName: true, phone: true, role: true, createdAt: true, avatar: true },
   });
 
   if (!staff) throw new AppError("Staff not found", HTTP_CODES.NOT_FOUND);

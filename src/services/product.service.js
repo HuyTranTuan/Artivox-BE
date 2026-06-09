@@ -12,6 +12,7 @@ async function getProducts(query = {}) {
           { name: { contains: query.search, mode: "insensitive" } },
           { slug: { contains: query.search, mode: "insensitive" } },
           { description: { contains: query.search, mode: "insensitive" } },
+          ...(!isNaN(Number(query.search)) ? [{ basePrice: { equals: Number(query.search) } }] : []),
         ],
       }),
     },
@@ -131,6 +132,7 @@ async function updateProduct(productId, data) {
       updateData.discountedPrice = null;
     }
   }
+  console.log(updateData)
 
   return prisma.product.update({
     where: { id: product.id },

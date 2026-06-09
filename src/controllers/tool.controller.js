@@ -35,9 +35,6 @@ const getToolBySlug = catchAsync(async (req, res) => {
 
 const createTool = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    bodyData.isActive = false;
-  }
   const data = await toolService.createTool(bodyData, req.files);
   await clearCache("tools:*");
   await clearCache("products:*");
@@ -48,9 +45,6 @@ const createTool = catchAsync(async (req, res) => {
 
 const updateTool = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    delete bodyData.isActive;
-  }
   const data = await toolService.updateTool(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
   await clearCache("tools:*");

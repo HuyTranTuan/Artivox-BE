@@ -35,9 +35,6 @@ const getMaterialBySlug = catchAsync(async (req, res) => {
 
 const createMaterial = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    bodyData.isActive = false;
-  }
   const data = await materialService.createMaterial(bodyData, req.files);
   await clearCache("materials:*");
   await clearCache("products:*");
@@ -48,9 +45,6 @@ const createMaterial = catchAsync(async (req, res) => {
 
 const updateMaterial = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    delete bodyData.isActive;
-  }
   const data = await materialService.updateMaterial(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
   await clearCache("materials:*");

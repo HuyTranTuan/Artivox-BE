@@ -64,6 +64,7 @@ async function adminLogin(email, password) {
       fullName: user.fullName,
       role: user.role,
       permission: user.permission,
+      avatar: user.avatar,
     },
   };
   return result;

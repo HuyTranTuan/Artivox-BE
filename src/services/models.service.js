@@ -104,7 +104,7 @@ async function updateModel(slug, data, files) {
       ...(data.description !== undefined && { description: data.description }),
       ...(data.basePrice !== undefined && { basePrice: parseFloat(data.basePrice) }),
       ...(data.stock !== undefined && { stock: parseInt(data.stock, 10) }),
-      ...(data.isActive !== undefined && { isActive: (data.isActive === "true" || data.isActive === true) }),
+      ...(data.isActive !== undefined && { isActive: String(data.isActive).toLowerCase() === "true" }),
       ...(data.collectionId !== undefined && { collectionId: data.collectionId ? BigInt(data.collectionId) : null }),
       model3D: {
         update: {

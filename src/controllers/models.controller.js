@@ -35,9 +35,6 @@ const getModelBySlug = catchAsync(async (req, res) => {
 
 const createModel = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    bodyData.isActive = false;
-  }
   const data = await modelsService.createModel(bodyData, req.files);
   await clearCache("models:*");
   await clearCache("products:*");
@@ -48,9 +45,6 @@ const createModel = catchAsync(async (req, res) => {
 
 const updateModel = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
-  if (req.user && req.user.role === "STAFF") {
-    delete bodyData.isActive;
-  }
   const data = await modelsService.updateModel(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
   await clearCache("models:*");

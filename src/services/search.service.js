@@ -19,27 +19,69 @@ async function searchGlobal(query, limit = 20, type = null) {
     searchFilter.AND.push({ type: type });
   }
 
-  const results = await prisma.product.findMany({
-    where: searchFilter,
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      thumbnail: true,
-      description: true,
-      type: true,
-      basePrice: true,
-      discountedPrice: true,
-      ratingAvg: true,
-      stock: true,
-    },
-    take: limit,
-    orderBy: { createdAt: "desc" },
-  });
+  const [products, discounts, articles] = await Promise.all([
+    (!type || type === "MODEL" || type === "MATERIAL" || type === "TOOL") ? prisma.product.findMany({
+      where: searchFilter,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        thumbnail: true,
+        description: true,
+        type: true,
+        basePrice: true,
+        discountedPrice: true,
+        ratingAvg: true,
+        stock: true,
+      },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }) : Promise.resolve([]),
+    (!type || type === "DISCOUNT") ? prisma.discount.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { code: { contains: query, mode: "insensitive" } },
+        ]
+      },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }) : Promise.resolve([]),
+    (!type || type === "ARTICLE") ? prisma.article.findMany({
+      where: {
+        deletedAt: null,
+        translations: {
+          some: {
+            OR: [
+              { title: { contains: query, mode: "insensitive" } },
+              { summary: { contains: query, mode: "insensitive" } }
+            ]
+          }
+        }
+      },
+      include: {
+        translations: true,
+      },
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }) : Promise.resolve([])
+  ]);
+
+  const items = [
+    ...products.map(p => ({ ...p, entityType: "PRODUCT" })),
+    ...discounts.map(d => ({ ...d, entityType: "DISCOUNT" })),
+    ...articles.map(a => ({ 
+      ...a, 
+      name: a.translations?.[0]?.title || "Unknown", 
+      description: a.translations?.[0]?.summary || "", 
+      entityType: "ARTICLE" 
+    })),
+  ];
 
   return {
-    total: results.length,
-    items: results,
+    total: items.length,
+    items,
   };
 }
 
