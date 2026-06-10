@@ -2,11 +2,12 @@ const cron = require("node-cron");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 const { google } = require("googleapis");
 
 const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-const BACKUP_DIR = path.join(os.tmpdir(), "artivox/backups");
+// Save backups to project root /backups folder
+const BACKUP_DIR = path.join(__dirname, "../../backups");
+const KEEP_DAYS = 7; // Auto-delete local backups older than 7 days
 
 function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
@@ -54,23 +55,46 @@ async function uploadToDrive(filepath, filename) {
   return res.data;
 }
 
+// Remove local backups older than KEEP_DAYS
+function cleanupOldBackups() {
+  try {
+    if (!fs.existsSync(BACKUP_DIR)) return;
+    const cutoff = Date.now() - KEEP_DAYS * 24 * 60 * 60 * 1000;
+    const files = fs.readdirSync(BACKUP_DIR).filter((f) => f.endsWith(".sql"));
+
+    for (const file of files) {
+      const filePath = path.join(BACKUP_DIR, file);
+      const { mtimeMs } = fs.statSync(filePath);
+      if (mtimeMs < cutoff) {
+        fs.unlinkSync(filePath);
+        console.log(`[Cron] Cleaned old backup: ${file}`);
+      }
+    }
+  } catch (err) {
+    console.error("[Cron] Cleanup failed:", err.message);
+  }
+}
+
 async function runBackup() {
   try {
+    console.log("[Cron] Starting database backup...");
     const { filepath, filename } = await dumpDatabase();
+    console.log(`[Cron] Dump saved: ${filepath}`);
 
     await uploadToDrive(filepath, filename);
+    console.log(`[Cron] Uploaded to Google Drive: ${filename}`);
 
-    // Cleanup local file
-    fs.unlink(filepath, () => {});
+    // Keep local file in backups/, just clean old ones
+    cleanupOldBackups();
   } catch (err) {
     console.error("[Cron] Backup failed:", err.message);
   }
 }
 
 function startCronJobs() {
-  // Every day at 3:00 AM
-  cron.schedule("0/5 * * * *", runBackup, { timezone: "Asia/Ho_Chi_Minh" });
-  console.log("[Cron] DB backup job scheduled: every 5 minutes");
+  // Every day at 3:00 AM Vietnam time
+  cron.schedule("0 3 * * *", runBackup, { timezone: "Asia/Ho_Chi_Minh" });
+  console.log("[Cron] DB backup job scheduled: daily at 3:00 AM (Asia/Ho_Chi_Minh)");
 }
 
 module.exports = { startCronJobs, runBackup };
