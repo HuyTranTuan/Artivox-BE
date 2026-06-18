@@ -32,8 +32,8 @@ const getMyOrders = catchAsync(async (req, res) => {
 // Cancel order
 const cancelOrder = catchAsync(async (req, res) => {
   const userID = req.user.id;
-  const { orderId } = req.params;
-  const data = await orderService.cancelOrder(orderId, userID);
+  const { orderNumber } = req.params;
+  const data = await orderService.cancelOrder(orderNumber, userID);
   
   // Emit to client
   req.app.get("io").of("/chat").to(`chat:${userID}`).emit("order_status_updated", {
@@ -55,16 +55,43 @@ const getAllOrders = catchAsync(async (req, res) => {
 
 // Fetch a single order by id (public)
 const getOrderById = catchAsync(async (req, res) => {
-  const { orderId } = req.params;
-  const data = await orderService.getOrderById(orderId);
+  const { orderNumber } = req.params;
+  const data = await orderService.getOrderById(orderNumber);
   if (!data) return res.notFound();
   return res.success(data, "Order detail fetched");
 });
 
+// Fetch a single order by orderNumber (public)
+const getOrderByNumber = catchAsync(async (req, res) => {
+  const { orderNumber } = req.params;
+  const data = await orderService.getOrderByNumber(orderNumber);
+  if (!data) return res.notFound();
+  return res.success(data, "Order detail fetched");
+});
+
+// Update order status (admin/staff workflow)
+const updateOrderStatus = catchAsync(async (req, res) => {
+  const { orderNumber } = req.params;
+  const { status } = req.body;
+  const data = await orderService.updateOrderStatus(orderNumber, status);
+  if (!data) return res.notFound();
+
+  req.app.get("io").of("/notifications").to("admin_room").emit("order_status_updated", {
+    orderId: data.id.toString(),
+    orderNumber,
+    status: data.status,
+  });
+
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
+
+  return res.success(data, "Order status updated");
+});
+
 // Approve order
 const approveOrder = catchAsync(async (req, res) => {
-  const { orderId } = req.params;
-  const data = await orderService.approveOrder(orderId);
+  const { orderNumber } = req.params;
+  const data = await orderService.approveOrder(orderNumber);
   if (!data) return res.notFound();
   
   // Emit to client
@@ -82,9 +109,9 @@ const approveOrder = catchAsync(async (req, res) => {
 // Update order payment status
 const updateOrderPaymentStatus = catchAsync(async (req, res) => {
   const userID = req.user.id;
-  const { orderId } = req.params;
+  const { orderNumber } = req.params;
   const { paymentStatus } = req.body;
-  const data = await orderService.updateOrderPaymentStatus(orderId, userID, paymentStatus);
+  const data = await orderService.updateOrderPaymentStatus(orderNumber, userID, paymentStatus);
   
   // Emit to client
   req.app.get("io").of("/chat").to(`chat:${userID}`).emit("order_status_updated", {
@@ -99,5 +126,5 @@ const updateOrderPaymentStatus = catchAsync(async (req, res) => {
   return res.success(data, "Order payment status updated");
 });
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder, updateOrderPaymentStatus };
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus };
 

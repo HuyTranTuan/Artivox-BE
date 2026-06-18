@@ -23,4 +23,18 @@ const getCustomerByEmail = catchAsync(async (req, res) => {
   return res.success(data, "Customer detail fetched");
 });
 
-module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail };
+// Update customer (admin)
+const updateCustomer = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const data = await customerService.updateCustomer(id, req.body);
+  return res.success(data, "Customer updated");
+});
+
+// Soft-delete customer (admin)
+const deleteCustomer = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  await customerService.deleteCustomer(id);
+  return res.success(null, "Customer deleted");
+});
+
+module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, updateCustomer, deleteCustomer };

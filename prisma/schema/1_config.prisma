@@ -34,9 +34,13 @@ enum MaterialUnit {
 }
 
 enum OrderStatus {
+  PENDING
+  PAYMENT_CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
   COMPLETED
   CANCELED
-  PENDING
 }
 
 enum PaymentStatus {

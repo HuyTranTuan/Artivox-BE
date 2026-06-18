@@ -1,7 +1,7 @@
 const toolService = require("@services/tool.service");
 const catchAsync = require("@utils/catchAsync");
 const { normalizeCatalogPagination } = require("@utils/catalogPagination");
-const { clearCache } = require("@middlewares/cache.middleware");
+const { clearCache, patchCacheField } = require("@middlewares/cache.middleware");
 
 // Fetch all tool products
 const getTools = catchAsync(async (req, res) => {
@@ -47,10 +47,16 @@ const updateTool = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
   const data = await toolService.updateTool(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
+  if (bodyData.basePrice !== undefined) {
+    await patchCacheField("tools:*", req.params.slug, { basePrice: data.basePrice });
+    await patchCacheField("products:*", req.params.slug, { basePrice: data.basePrice });
+  }
   await clearCache("tools:*");
   await clearCache("tool:*");
   await clearCache("products:*");
   await clearCache("product:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Tool updated");
 });
 

@@ -83,4 +83,24 @@ async function blockHarmfulCustomer(email) {
   return;
 }
 
-module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, blockHarmfulCustomer };
+// Update customer info (admin)
+async function updateCustomer(id, { fullName, email, phone, address }) {
+  return prisma.customer.update({
+    where: { id: BigInt(id) },
+    data: { fullName, email, phone, address },
+    select: {
+      id: true, email: true, fullName: true, phone: true,
+      address: true, slug: true, verifiedAt: true, createdAt: true,
+    },
+  });
+}
+
+// Soft-delete customer (admin)
+async function deleteCustomer(id) {
+  return prisma.customer.update({
+    where: { id: BigInt(id) },
+    data: { deletedAt: new Date() },
+  });
+}
+
+module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, blockHarmfulCustomer, updateCustomer, deleteCustomer };

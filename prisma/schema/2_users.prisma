@@ -52,13 +52,15 @@ model Customer {
   updatedAt               DateTime  @default(now()) @updatedAt
   deletedAt               DateTime?
 
-  orders       Order[]
-  cartItems    CartItem[]
-  chatRooms    ChatRoom[]
-  chatMessages ChatMessage[]
-  activityLogs CustomerActivityLog[]
-  refreshTokens RefreshToken[]
-  notifications Notification[]
+  orders            Order[]
+  cartItems         CartItem[]
+  chatRooms         ChatRoom[]
+  chatMessages      ChatMessage[]
+  activityLogs      CustomerActivityLog[]
+  refreshTokens     RefreshToken[]
+  notifications     Notification[]
+  comments          Comment[]
+  shippingAddresses ShippingAddress[]
 
   @@index([email])
   @@index([slug])

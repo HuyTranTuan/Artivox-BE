@@ -161,9 +161,9 @@ async function getMyOrders(customerId) {
 }
 
 // Cancel order
-async function cancelOrder(id, customerId) {
+async function cancelOrder(orderNumber, customerId) {
   const order = await prisma.order.findFirst({
-    where: { id: BigInt(id), customerId },
+    where: { orderNumber, customerId },
   });
   if (!order) {
     throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
@@ -173,7 +173,7 @@ async function cancelOrder(id, customerId) {
   }
 
   return prisma.order.update({
-    where: { id: BigInt(id) },
+    where: { id: order.id },
     data: { status: "CANCELED" },
   });
 }
@@ -193,11 +193,47 @@ async function getAllOrders() {
 }
 
 /**
- * Fetch a single order by id with order items.
+ * Fetch a single order by orderNumber with order items.
  */
-async function getOrderById(id) {
+async function getOrderById(orderNumber) {
   return prisma.order.findFirst({
-    where: { id: BigInt(id), deletedAt: null },
+    where: { orderNumber, deletedAt: null },
+    include: {
+      items: { include: { product: true } },
+      customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },
+    },
+  });
+}
+
+/**
+ * Fetch a single order by orderNumber.
+ */
+async function getOrderByNumber(orderNumber) {
+  return prisma.order.findFirst({
+    where: { orderNumber, deletedAt: null },
+    include: {
+      items: { include: { product: true } },
+      customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },
+    },
+  });
+}
+
+/**
+ * Update order status (workflow: PENDING -> PAYMENT_CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED -> COMPLETED)
+ */
+const STATUS_FLOW = ["PENDING", "PAYMENT_CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "COMPLETED"];
+
+async function updateOrderStatus(orderNumber, newStatus) {
+  const order = await prisma.order.findFirst({
+    where: { orderNumber, deletedAt: null },
+    include: { customer: { select: { id: true, fullName: true } } },
+  });
+  if (!order) throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
+  if (!STATUS_FLOW.includes(newStatus)) throw new AppError("Invalid status", HTTP_CODES.BAD_REQUESTED);
+
+  return prisma.order.update({
+    where: { id: order.id },
+    data: { status: newStatus },
     include: {
       items: { include: { product: true } },
       customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },
@@ -208,9 +244,9 @@ async function getOrderById(id) {
 /**
  * Approve order (change status to APPROVED)
  */
-async function approveOrder(orderId) {
+async function approveOrder(orderNumber) {
   const order = await prisma.order.findFirst({
-    where: { id: BigInt(orderId), deletedAt: null },
+    where: { orderNumber, deletedAt: null },
     include: { customer: { select: { id: true, fullName: true } } },
   });
 
@@ -222,7 +258,7 @@ async function approveOrder(orderId) {
   }
 
   const updated = await prisma.order.update({
-    where: { id: BigInt(orderId) },
+    where: { id: order.id },
     data: { status: "COMPLETED" },
     include: { items: { include: { product: true } } },
   });
@@ -232,22 +268,22 @@ async function approveOrder(orderId) {
     type: "ORDER_APPROVED",
     title: "Order Approved",
     message: `Your order ${order.orderNumber} has been approved and is being prepared`,
-    metadata: { orderId: orderId.toString() },
+    metadata: { orderId: order.id.toString(), orderNumber: order.orderNumber },
   });
 
   return updated;
 }
 
 // Update order payment status
-async function updateOrderPaymentStatus(id, customerId, paymentStatus) {
+async function updateOrderPaymentStatus(orderNumber, customerId, paymentStatus) {
   const order = await prisma.order.findFirst({
-    where: { id: BigInt(id), customerId },
+    where: { orderNumber, customerId },
   });
   if (!order) {
     throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
   }
   return prisma.order.update({
-    where: { id: BigInt(id) },
+    where: { id: order.id },
     data: {
       paymentStatus,
       paidAt: paymentStatus === "PAID" ? new Date() : order.paidAt,
@@ -255,4 +291,4 @@ async function updateOrderPaymentStatus(id, customerId, paymentStatus) {
   });
 }
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, approveOrder, updateOrderPaymentStatus };
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus };

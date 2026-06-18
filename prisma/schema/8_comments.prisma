@@ -1,0 +1,45 @@
+// ─── Comments ────────────────────────────────────────
+
+model Comment {
+  id         BigInt      @id @default(autoincrement())
+  customerId BigInt
+  entityType CommentEntityType
+  entityId   BigInt
+  content    String      @db.Text
+  rating     Int?        // 1-5 optional
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @default(now()) @updatedAt
+  deletedAt  DateTime?
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+enum CommentEntityType {
+  PRODUCT
+  ARTICLE
+}
+
+// ─── Shipping Addresses ──────────────────────────────
+
+model ShippingAddress {
+  id           BigInt   @id @default(autoincrement())
+  customerId   BigInt
+  label        String   @db.VarChar(100)   // e.g. "Home", "Office"
+  fullAddress  String   @db.VarChar(500)
+  provinceCode String   @db.VarChar(20)
+  wardCode     String?  @db.VarChar(20)
+  streetDetail String   @db.VarChar(300)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("shipping_addresses")
+}

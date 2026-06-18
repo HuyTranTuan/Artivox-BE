@@ -1,7 +1,7 @@
 const modelsService = require("@services/models.service");
 const catchAsync = require("@utils/catchAsync");
 const { normalizeCatalogPagination } = require("@utils/catalogPagination");
-const { clearCache } = require("@middlewares/cache.middleware");
+const { clearCache, patchCacheField } = require("@middlewares/cache.middleware");
 
 // Fetch all model products
 const getModels = catchAsync(async (req, res) => {
@@ -47,10 +47,17 @@ const updateModel = catchAsync(async (req, res) => {
   const bodyData = { ...req.body };
   const data = await modelsService.updateModel(req.params.slug, bodyData, req.files);
   if (!data) return res.notFound();
+  // Immediately patch price in cached list/detail entries before wiping
+  if (bodyData.basePrice !== undefined) {
+    await patchCacheField("models:*", req.params.slug, { basePrice: data.basePrice });
+    await patchCacheField("products:*", req.params.slug, { basePrice: data.basePrice });
+  }
   await clearCache("models:*");
   await clearCache("model:*");
   await clearCache("products:*");
   await clearCache("product:*");
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
   return res.success(data, "Model updated");
 });
 

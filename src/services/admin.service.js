@@ -3,6 +3,7 @@ const { prisma } = require("@libs/prisma");
 const { v7 } = require("uuid");
 const { HTTP_CODES } = require("@/config/constants");
 const AppError = require("@/utils/AppError");
+const { clearCache } = require("@/middlewares/cache.middleware");
 
 const saltRound = Number(process.env.BCRYPT_SALT) || 10;
 
@@ -93,14 +94,34 @@ async function getAdminRevenue() {
 
 // Update order status
 async function updateOrderStatus(id, status, assignedAdminId) {
-  const order = await prisma.order.findUnique({ where: { id: BigInt(id) } });
+  const order = await prisma.order.findUnique({
+    where: { id: BigInt(id) },
+    include: { items: true },
+  });
   if (!order) throw new AppError("Not found", HTTP_CODES.NOT_FOUND);
 
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id: BigInt(id) },
     data: { status, ...(assignedAdminId && { assignedAdminId }) },
     include: { items: { include: { product: true } } },
   });
+
+  // When order moves to PROCESSING, deduct stock and clear product cache
+  if (status === "PROCESSING" && order.status !== "PROCESSING") {
+    for (const item of order.items) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+    // Invalidate Redis product cache so stale stock is not served
+    await clearCache("products:*");
+    await clearCache("models:*");
+    await clearCache("materials:*");
+    await clearCache("tools:*");
+  }
+
+  return updated;
 }
 
 // Get all customers

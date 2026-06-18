@@ -11,9 +11,11 @@ router.get("/", orderController.getAllOrders);
 router.use(authMiddleware);
 router.post("/", orderController.createOrder);
 router.get("/me", orderController.getMyOrders);
-router.post("/:orderId/cancel", orderController.cancelOrder);
-router.patch("/:orderId/approve", orderController.approveOrder);
-router.patch("/:orderId/payment-status", orderController.updateOrderPaymentStatus);
-router.get("/:orderId", orderController.getOrderById);
+router.post("/:orderNumber/cancel", orderController.cancelOrder);
+router.patch("/:orderNumber/approve", orderController.approveOrder);
+router.patch("/:orderNumber/payment-status", orderController.updateOrderPaymentStatus);
+router.get("/number/:orderNumber", orderController.getOrderByNumber);
+router.patch("/number/:orderNumber/status", orderController.updateOrderStatus);
+router.get("/:orderNumber", orderController.getOrderById);
 
 module.exports = router;
