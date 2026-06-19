@@ -84,4 +84,7 @@ enum ImageRole {
   THUMBNAIL_BEFORE 
   THUMBNAIL_AFTER  
   GALLERY          
+  IMG_MOBILE       
+  IMG_TABLET       
+  IMG_PC           
 }

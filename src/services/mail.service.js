@@ -103,4 +103,81 @@ async function sendResetPasswordEmail(to, token, userType = "customer") {
   return sendMail({ to, subject: "Reset your Artivox password", html });
 }
 
-module.exports = { sendMail, sendVerificationEmail, sendResetPasswordEmail };
+/**
+ * Send model download email after successful order.
+ * Generates a 10-minute pre-signed R2 URL for each purchased model.
+ *
+ * @param {string} to - customer email
+ * @param {string} customerName
+ * @param {string} orderId
+ * @param {Array<{name: string, sourceFileUrl: string}>} models
+ */
+async function sendOrderModelEmail(to, customerName, orderId, models) {
+  const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+  const { GetObjectCommand } = require("@aws-sdk/client-s3");
+  const r2Client = require("@libs/r2");
+
+  const baseUrl = (process.env.R2_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
+
+  const links = await Promise.all(
+    models.map(async (m) => {
+      let url = m.sourceFileUrl || "";
+      // Extract the R2 key from the public URL
+      if (url.startsWith(baseUrl) && baseUrl) {
+        const key = url.slice(baseUrl.length + 1);
+        url = await getSignedUrl(
+          r2Client,
+          new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
+          { expiresIn: 600 } // 10 minutes
+        );
+      }
+      return { name: m.name, url };
+    })
+  );
+
+  const modelRows = links
+    .map(
+      (l) =>
+        `<tr>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;">${l.name}</td>
+          <td style="padding:10px 0;border-bottom:1px solid #eee;text-align:right;">
+            <a href="${l.url}" style="background:#FF6B00;color:#fff;padding:8px 18px;border-radius:6px;text-decoration:none;font-weight:bold;">Download</a>
+          </td>
+        </tr>`
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 520px; margin: 40px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .header { background: #1a1a2e; padding: 32px; text-align: center; }
+    .header h1 { color: #FF6B00; margin: 0; font-size: 26px; letter-spacing: 1px; }
+    .body { padding: 32px; color: #333; }
+    .body p { line-height: 1.6; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .notice { background: #fff8e1; border-left: 4px solid #FF6B00; padding: 12px 16px; border-radius: 4px; margin-top: 20px; font-size: 13px; color: #555; }
+    .footer { text-align: center; padding: 16px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>Artivox</h1></div>
+    <div class="body">
+      <p>Hi <strong>${customerName}</strong>,</p>
+      <p>Your order <strong>#${orderId}</strong> has been confirmed. Your purchased 3D models are ready to download:</p>
+      <table>${modelRows}</table>
+      <div class="notice">⏱ These download links expire in <strong>10 minutes</strong>. If they expire, you can request new links from your order history.</div>
+    </div>
+    <div class="footer">© ${new Date().getFullYear()} Artivox. All rights reserved.</div>
+  </div>
+</body>
+</html>`;
+
+  return sendMail({ to, subject: `Your Artivox order #${orderId} is ready to download`, html });
+}
+
+module.exports = { sendMail, sendVerificationEmail, sendResetPasswordEmail, sendOrderModelEmail };

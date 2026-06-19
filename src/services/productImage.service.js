@@ -194,10 +194,35 @@ function secureProductImages(product) {
   return secured;
 }
 
+/**
+ * Upload srcset images (mobile, tablet, pc) for a product.
+ * Roles: IMG_MOBILE, IMG_TABLET, IMG_PC
+ */
+async function uploadSrcsetImages(productId, slug, files) {
+  const variants = [
+    { field: "img_mobile", role: "IMG_MOBILE", label: "mobile", sortOrder: 10 },
+    { field: "img_tablet", role: "IMG_TABLET", label: "tablet", sortOrder: 11 },
+    { field: "img_pc", role: "IMG_PC", label: "pc", sortOrder: 12 },
+  ];
+
+  for (const v of variants) {
+    if (!files?.[v.field]?.[0]) continue;
+    const file = files[v.field][0];
+    const key = `products/${slug}/${v.label}.webp`;
+    const url = await uploadToR2(file.buffer, key);
+
+    await prisma.productImage.deleteMany({ where: { productId, role: v.role } });
+    await prisma.productImage.create({
+      data: { productId, url, altText: `${slug} ${v.label}`, role: v.role, sortOrder: v.sortOrder },
+    });
+  }
+}
+
 module.exports = {
   uploadToR2,
   uploadRawToR2,
   uploadProductImages,
+  uploadSrcsetImages,
   uploadCollectionImage,
   uploadArticleImage,
   getSecureImageUrl,

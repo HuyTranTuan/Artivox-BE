@@ -19,8 +19,8 @@ const prisma = new PrismaClient({
   errorFormat: "pretty",
   transactionOptions: {
     isolationLevel: "Serializable",
-    timeout: 1000,
-    maxWait: 1000,
+    timeout: 5000,
+    maxWait: 5000,
     readOnly: false,
     deferrable: false,
   },

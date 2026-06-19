@@ -2,6 +2,7 @@ const { HTTP_CODES } = require("@/config/constants");
 const { prisma } = require("@libs/prisma");
 const { v4: uuidv4 } = require("uuid");
 const notificationService = require("@services/notification.service");
+const { sendOrderModelEmail } = require("@services/mail.service");
 const AppError = require("@/utils/AppError");
 
 // Create order from items
@@ -148,6 +149,21 @@ async function createOrder(customerId, {
     });
   }
 
+  // Fire-and-forget: send download email if payment is already confirmed
+  if (paymentStatus === "PAID") {
+    const modelItems = await prisma.orderItem.findMany({
+      where: { orderId: order.id },
+      include: { product: { include: { model3D: true } } },
+    });
+    const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { email: true, fullName: true } });
+    const models = modelItems
+      .filter((oi) => oi.product?.type === "MODEL" && oi.product?.model3D?.sourceFileUrl)
+      .map((oi) => ({ name: oi.product.name, sourceFileUrl: oi.product.model3D.sourceFileUrl }));
+    if (models.length > 0 && customer?.email) {
+      sendOrderModelEmail(customer.email, customer.fullName || "Customer", order.orderNumber, models).catch(() => {});
+    }
+  }
+
   return order;
 }
 
@@ -270,6 +286,26 @@ async function approveOrder(orderNumber) {
     message: `Your order ${order.orderNumber} has been approved and is being prepared`,
     metadata: { orderId: order.id.toString(), orderNumber: order.orderNumber },
   });
+
+  // Fire-and-forget: send download email to customer
+  const orderWithModels = await prisma.order.findUnique({
+    where: { id: order.id },
+    include: {
+      items: { include: { product: { include: { model3D: true } } } },
+      customer: { select: { email: true, fullName: true } },
+    },
+  });
+  const models = (orderWithModels?.items || [])
+    .filter((oi) => oi.product?.type === "MODEL" && oi.product?.model3D?.sourceFileUrl)
+    .map((oi) => ({ name: oi.product.name, sourceFileUrl: oi.product.model3D.sourceFileUrl }));
+  if (models.length > 0 && orderWithModels?.customer?.email) {
+    sendOrderModelEmail(
+      orderWithModels.customer.email,
+      orderWithModels.customer.fullName || "Customer",
+      order.orderNumber,
+      models
+    ).catch(() => {});
+  }
 
   return updated;
 }

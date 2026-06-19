@@ -1,5 +1,5 @@
 const { prisma } = require("@libs/prisma");
-const { uploadProductImages, getSecureImageUrl } = require("@services/productImage.service");
+const { uploadProductImages, uploadSrcsetImages, uploadRawToR2, getSecureImageUrl } = require("@services/productImage.service");
 
 /**
  * Fetch all model products (type=MODEL) with their Model3D details.
@@ -60,6 +60,18 @@ async function getModelBySlug(slug, query = {}) {
 }
 
 async function createModel(data, files) {
+
+  // Build sourceFileUrl: upload 3D file to R2 if provided
+  let sourceFileUrl = data.sourceFileUrl || "";
+  if (files?.source_file?.[0]) {
+    const file = files.source_file[0];
+    const ext = (file.originalname || "file").split(".").pop().toLowerCase();
+    const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const key = `models/${slug}.${ext}`;
+    const url = await uploadRawToR2(file.buffer, key, file.mimetype || "application/octet-stream");
+    sourceFileUrl = url || key;
+  }
+
   // Create Product and Model3D
   const product = await prisma.product.create({
     data: {
@@ -74,15 +86,16 @@ async function createModel(data, files) {
       model3D: {
         create: {
           previewFileUrl: data.previewFileUrl || "",
-          sourceFileUrl: data.sourceFileUrl || "",
+          sourceFileUrl,
         }
       }
     }
   });
 
-  // Handle images
+  // Handle images (thumbnail, gallery, srcset)
   if (files) {
     await uploadProductImages(product.id, product.slug, files);
+    await uploadSrcsetImages(product.id, product.slug, files);
   }
 
   return getModelBySlug(product.slug);

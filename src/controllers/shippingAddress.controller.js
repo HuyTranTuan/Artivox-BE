@@ -21,7 +21,7 @@ const createAddress = async (req, res) => {
     const customerId = req.user?.id;
     const { label, fullAddress, provinceCode, wardCode, streetDetail, isDefault } = req.body;
     if (!label || !fullAddress || !provinceCode || !streetDetail) {
-      return res.error("label, fullAddress, provinceCode, streetDetail required", HTTP_CODES.BAD_REQUEST);
+      return res.error("label, fullAddress, provinceCode, streetDetail required", HTTP_CODES.BAD_REQUESTED);
     }
     if (isDefault) {
       // unset existing default
@@ -71,4 +71,23 @@ const deleteAddress = async (req, res) => {
   }
 };
 
-module.exports = { getMyAddresses, createAddress, updateAddress, deleteAddress };
+// PATCH /shipping-addresses/:id/set-default
+const setDefaultAddress = async (req, res) => {
+  try {
+    const customerId = req.user?.id;
+    const { id } = req.params;
+    const existing = await prisma.shippingAddress.findUnique({ where: { id: BigInt(id) } });
+    if (!existing || existing.customerId.toString() !== customerId.toString()) return res.error("Not found", HTTP_CODES.NOT_FOUND);
+
+    await prisma.shippingAddress.updateMany({ where: { customerId: BigInt(customerId), isDefault: true }, data: { isDefault: false } });
+    const updated = await prisma.shippingAddress.update({
+      where: { id: BigInt(id) },
+      data: { isDefault: true },
+    });
+    return res.success({ ...updated, id: updated.id.toString(), customerId: updated.customerId.toString() });
+  } catch (err) {
+    return res.error(err.message, HTTP_CODES.INTERNAL_SERVER_ERROR);
+  }
+};
+
+module.exports = { getMyAddresses, createAddress, updateAddress, deleteAddress, setDefaultAddress };

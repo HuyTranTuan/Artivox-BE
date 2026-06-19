@@ -3,6 +3,11 @@ const { HTTP_CODES } = require("@/config/constants");
 // Attach res.success() and res.error() helpers
 const responseMiddleware = (req, res, next) => {
   res.success = (data, message = "Success", statusCode = HTTP_CODES.OK) => {
+    // Overload: res.success(data, statusCode) — 2nd arg is number
+    if (typeof message === "number") {
+      statusCode = message;
+      message = "Success";
+    }
     return res.status(statusCode).json({
       status: "success",
       message,

@@ -6,7 +6,7 @@ const getComments = async (req, res) => {
   try {
     const { entityType, entityId, page = 1, limit = 10 } = req.query;
     if (!entityType || !entityId) {
-      return res.error("entityType and entityId required", HTTP_CODES.BAD_REQUEST);
+      return res.error("entityType and entityId required", HTTP_CODES.BAD_REQUESTED);
     }
     const skip = (Number(page) - 1) * Number(limit);
     const [comments, total] = await Promise.all([
@@ -34,7 +34,7 @@ const createComment = async (req, res) => {
     if (!customerId) return res.error("Unauthorized", HTTP_CODES.UNAUTHORIZED);
     const { entityType, entityId, content, rating } = req.body;
     if (!entityType || !entityId || !content?.trim()) {
-      return res.error("entityType, entityId, content required", HTTP_CODES.BAD_REQUEST);
+      return res.error("entityType, entityId, content required", HTTP_CODES.BAD_REQUESTED);
     }
     // only verified customers
     const customer = await prisma.customer.findUnique({ where: { id: BigInt(customerId) } });
