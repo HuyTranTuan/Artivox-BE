@@ -194,12 +194,15 @@ async function cancelOrder(orderNumber, customerId) {
   });
 }
 
-/**
- * Fetch all orders with order items.
- */
-async function getAllOrders() {
+async function getAllOrders(params = {}) {
+  const { customerId } = params;
+  const where = { deletedAt: null };
+  if (customerId) {
+    where.customerId = BigInt(customerId);
+  }
+
   return prisma.order.findMany({
-    where: { deletedAt: null },
+    where,
     include: {
       items: { include: { product: true } },
       customer: { select: { id: true, fullName: true, email: true, phone: true, slug: true } },

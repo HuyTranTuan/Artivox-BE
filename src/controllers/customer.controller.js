@@ -37,4 +37,12 @@ const deleteCustomer = catchAsync(async (req, res) => {
   return res.success(null, "Customer deleted");
 });
 
-module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, updateCustomer, deleteCustomer };
+// Fetch a single customer by id
+const getCustomerById = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const data = await customerService.getCustomerById(id);
+  if (!data) res.notFound();
+  return res.success(data, "Customer detail fetched");
+});
+
+module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, getCustomerById, updateCustomer, deleteCustomer };

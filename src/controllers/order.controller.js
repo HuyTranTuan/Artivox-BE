@@ -49,7 +49,7 @@ const cancelOrder = catchAsync(async (req, res) => {
 
 // Fetch all orders (public)
 const getAllOrders = catchAsync(async (req, res) => {
-  const data = await orderService.getAllOrders();
+  const data = await orderService.getAllOrders(req.query);
   return res.success(data, "Orders fetched");
 });
 
@@ -76,11 +76,21 @@ const updateOrderStatus = catchAsync(async (req, res) => {
   const data = await orderService.updateOrderStatus(orderNumber, status);
   if (!data) return res.notFound();
 
-  req.app.get("io").of("/notifications").to("admin_room").emit("order_status_updated", {
+  const io = req.app.get("io");
+  // Notify admin room
+  io.of("/notifications").to("admin_room").emit("order_status_updated", {
     orderId: data.id.toString(),
     orderNumber,
     status: data.status,
   });
+  // Notify the customer so Ecommerce can update in real-time
+  if (data.customerId) {
+    io.of("/chat").to(`chat:${data.customerId}`).emit("order_status_updated", {
+      orderId: data.id.toString(),
+      orderNumber,
+      status: data.status,
+    });
+  }
 
   await clearCache("admin_dashboard:*");
   await clearCache("staff_dashboard:*");

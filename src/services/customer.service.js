@@ -103,4 +103,23 @@ async function deleteCustomer(id) {
   });
 }
 
-module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, blockHarmfulCustomer, updateCustomer, deleteCustomer };
+// Fetch a single customer by id.
+async function getCustomerById(id) {
+  return prisma.customer.findFirst({
+    where: { id: BigInt(id), deletedAt: null },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      address: true,
+      slug: true,
+      dateOfBirth: true,
+      gender: true,
+      verifiedAt: true,
+      createdAt: true,
+    },
+  });
+}
+
+module.exports = { getCustomers, getCustomerBySlug, getCustomerByEmail, getCustomerById, blockHarmfulCustomer, updateCustomer, deleteCustomer };
