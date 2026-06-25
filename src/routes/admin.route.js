@@ -1,5 +1,6 @@
 const express = require("express");
 const adminController = require("@controllers/admin.controller");
+const orderController = require("@controllers/order.controller");
 const { authMiddleware, restrictTo } = require("@middlewares/auth.middleware");
 const { validateMiddleware } = require("@/middlewares/validate.middleware");
 const { uploadStaffImageMiddleware } = require("@/middlewares/upload.middleware");
@@ -23,6 +24,7 @@ router.get("/customers/:slug", adminController.getCustomer);
 router.patch("/customers/:slug/banned", adminController.getCustomerBanned);
 router.get("/orders", adminController.getAllOrders);
 router.patch("/orders/:id", adminController.updateOrderStatus);
+router.patch("/orders/number/:orderNumber/payment-status", orderController.updateOrderPaymentStatusAdmin);
 router.get("/revenue", adminController.getAdminRevenue);
 
 router.post("/staff-create", validateMiddleware({ body: registerSchema }), adminController.createStaff);

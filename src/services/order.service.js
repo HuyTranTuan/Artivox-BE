@@ -330,4 +330,21 @@ async function updateOrderPaymentStatus(orderNumber, customerId, paymentStatus) 
   });
 }
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus };
+// Update order payment status (Admin)
+async function updateOrderPaymentStatusAdmin(orderNumber, paymentStatus) {
+  const order = await prisma.order.findFirst({
+    where: { orderNumber },
+  });
+  if (!order) {
+    throw new AppError("Order not found", HTTP_CODES.NOT_FOUND);
+  }
+  return prisma.order.update({
+    where: { id: order.id },
+    data: {
+      paymentStatus,
+      paidAt: paymentStatus === "PAID" ? new Date() : order.paidAt,
+    },
+  });
+}
+
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus, updateOrderPaymentStatusAdmin };

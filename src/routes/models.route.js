@@ -7,6 +7,7 @@ const { cacheMiddleware } = require("@middlewares/cache.middleware");
 const router = express.Router();
 
 router.get("/", optionalAuthMiddleware, cacheMiddleware("models", 300), modelsController.getModels);
+router.get("/:slug/presigned", modelsController.getPresignedModelUrl); // presigned 60s
 router.get("/:slug", optionalAuthMiddleware, cacheMiddleware("model", 300), modelsController.getModelBySlug);
 
 router.use(authMiddleware, restrictTo("ADMIN", "STAFF"));

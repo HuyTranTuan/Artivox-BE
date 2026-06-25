@@ -19,8 +19,13 @@ const shippingAddressRoutes = require("@routes/shippingAddress.route");
 
 const router = express.Router();
 
+const modelsController = require("@controllers/models.controller");
+
 //////// Authorization /////////
 router.use("/auth", authRoutes);
+
+// 3D Model Proxy (public)
+router.get("/3d-proxy", modelsController.proxy3DModel);
 
 /////////// Admin /////////////
 router.use("/admin", adminRoutes);

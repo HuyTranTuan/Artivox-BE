@@ -21,7 +21,18 @@ async function getModels(query = {}) {
   const [items, total] = await prisma.$transaction([
     prisma.product.findMany({
       where,
-      include: { model3D: true, images: { orderBy: { sortOrder: 'asc' } } },
+      include: { 
+        model3D: {
+          select: {
+            id: true,
+            productId: true,
+            previewFileUrl: true,
+            createdAt: true,
+            updatedAt: true,
+          }
+        },
+        images: { orderBy: { sortOrder: 'asc' } }
+      },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: query.limit,
       skip: query.skip,
@@ -48,13 +59,23 @@ async function getModelBySlug(slug, query = {}) {
       type: "MODEL",
       ...(query.isActive !== undefined && { isActive: query.isActive }),
     },
-    include: { model3D: true, collection: true, images: { orderBy: { sortOrder: 'asc' } } },
+    include: { model3D: {
+      select: {
+        id: true,
+        productId: true,
+        previewFileUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    }, collection: true, images: { orderBy: { sortOrder: 'asc' } } },
   });
 
   if (!product) return null;
 
   return {
     ...product,
+    sourceFileUrl: product.model3D?.sourceFileUrl || "",
+    previewFileUrl: product.model3D?.previewFileUrl || "",
     images: product.images?.map(img => ({ ...img, url: getSecureImageUrl(img.url) }))
   };
 }
@@ -109,6 +130,16 @@ async function updateModel(slug, data, files) {
 
   if (!existing) return null;
 
+  // Upload new 3D source file if provided
+  let newSourceFileUrl = undefined;
+  if (files?.source_file?.[0]) {
+    const file = files.source_file[0];
+    const ext = (file.originalname || "file").split(".").pop().toLowerCase();
+    const key = `models/${slug}.${ext}`;
+    const url = await uploadRawToR2(file.buffer, key, file.mimetype || "application/octet-stream");
+    newSourceFileUrl = url || key;
+  }
+
   const product = await prisma.product.update({
     where: { id: existing.id },
     data: {
@@ -122,7 +153,7 @@ async function updateModel(slug, data, files) {
       model3D: {
         update: {
           ...(data.previewFileUrl !== undefined && { previewFileUrl: data.previewFileUrl }),
-          ...(data.sourceFileUrl !== undefined && { sourceFileUrl: data.sourceFileUrl }),
+          sourceFileUrl: newSourceFileUrl ?? (data.sourceFileUrl !== undefined ? data.sourceFileUrl : existing.model3D?.sourceFileUrl ?? ""),
         }
       }
     }

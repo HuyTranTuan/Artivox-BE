@@ -12,7 +12,7 @@ const imageFilter = (req, file, callback) => {
 
 const memoryStorage = multer.memoryStorage();
 const fileSizeLimit = Number(process.env.STAFF_IMAGE_MAX_FILE_SIZE || 10 * 1024 * 1024);
-const MODEL_3D_SIZE_LIMIT = 50 * 1024 * 1024; // 50MB
+const MODEL_3D_SIZE_LIMIT = 100 * 1024 * 1024; // 100MB
 
 const uploadStaffImageMiddleware = multer({
   storage: memoryStorage,

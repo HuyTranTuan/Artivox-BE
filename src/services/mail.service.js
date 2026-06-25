@@ -8,10 +8,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/**
- * Send a raw email
- * @param {Object} opts - { to, subject, html, text }
- */
 async function sendMail({ to, subject, html, text }) {
   return transporter.sendMail({
     from: `"Artivox" <${process.env.MAIL_USER || "[EMAIL_ADDRESS]"}>`,
@@ -22,11 +18,6 @@ async function sendMail({ to, subject, html, text }) {
   });
 }
 
-/**
- * Send email-verification email
- * @param {string} to - recipient email
- * @param {string} token - JWT access token
- */
 async function sendVerificationEmail(to, token) {
   const feCustomerUrl = process.env.FE_CUSTOMER_URL || "http://localhost:3000";
   const verifyUrl = `${feCustomerUrl}/auth/verify-email?token=${token}`;
@@ -103,15 +94,6 @@ async function sendResetPasswordEmail(to, token, userType = "customer") {
   return sendMail({ to, subject: "Reset your Artivox password", html });
 }
 
-/**
- * Send model download email after successful order.
- * Generates a 10-minute pre-signed R2 URL for each purchased model.
- *
- * @param {string} to - customer email
- * @param {string} customerName
- * @param {string} orderId
- * @param {Array<{name: string, sourceFileUrl: string}>} models
- */
 async function sendOrderModelEmail(to, customerName, orderId, models) {
   const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
   const { GetObjectCommand } = require("@aws-sdk/client-s3");
@@ -128,7 +110,7 @@ async function sendOrderModelEmail(to, customerName, orderId, models) {
         url = await getSignedUrl(
           r2Client,
           new GetObjectCommand({ Bucket: process.env.R2_BUCKET_NAME, Key: key }),
-          { expiresIn: 600 } // 10 minutes
+          { expiresIn: 60 } // 1 minute
         );
       }
       return { name: m.name, url };

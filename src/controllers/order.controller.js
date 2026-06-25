@@ -98,6 +98,37 @@ const updateOrderStatus = catchAsync(async (req, res) => {
   return res.success(data, "Order status updated");
 });
 
+// Update order payment status (admin/staff workflow)
+const updateOrderPaymentStatusAdmin = catchAsync(async (req, res) => {
+  const { orderNumber } = req.params;
+  const { paymentStatus } = req.body;
+  const data = await orderService.updateOrderPaymentStatusAdmin(orderNumber, paymentStatus);
+  if (!data) return res.notFound();
+
+  const io = req.app.get("io");
+  // Notify admin room
+  io.of("/notifications").to("admin_room").emit("order_status_updated", {
+    orderId: data.id.toString(),
+    orderNumber,
+    status: data.status,
+    paymentStatus: data.paymentStatus,
+  });
+  // Notify the customer so Ecommerce can update in real-time
+  if (data.customerId) {
+    io.of("/chat").to(`chat:${data.customerId}`).emit("order_status_updated", {
+      orderId: data.id.toString(),
+      orderNumber,
+      status: data.status,
+      paymentStatus: data.paymentStatus,
+    });
+  }
+
+  await clearCache("admin_dashboard:*");
+  await clearCache("staff_dashboard:*");
+
+  return res.success(data, "Order payment status updated");
+});
+
 // Approve order
 const approveOrder = catchAsync(async (req, res) => {
   const { orderNumber } = req.params;
@@ -136,5 +167,5 @@ const updateOrderPaymentStatus = catchAsync(async (req, res) => {
   return res.success(data, "Order payment status updated");
 });
 
-module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus };
+module.exports = { createOrder, getMyOrders, cancelOrder, getAllOrders, getOrderById, getOrderByNumber, updateOrderStatus, approveOrder, updateOrderPaymentStatus, updateOrderPaymentStatusAdmin };
 

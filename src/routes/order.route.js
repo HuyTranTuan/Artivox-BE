@@ -16,6 +16,7 @@ router.patch("/:orderNumber/approve", orderController.approveOrder);
 router.patch("/:orderNumber/payment-status", orderController.updateOrderPaymentStatus);
 router.get("/number/:orderNumber", orderController.getOrderByNumber);
 router.patch("/number/:orderNumber/status", orderController.updateOrderStatus);
+router.patch("/number/:orderNumber/payment-status", orderController.updateOrderPaymentStatusAdmin);
 router.get("/:orderNumber", orderController.getOrderById);
 
 module.exports = router;
