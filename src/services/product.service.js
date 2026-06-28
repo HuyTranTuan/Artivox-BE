@@ -16,7 +16,7 @@ async function getProducts(query = {}) {
         ],
       }),
     },
-    include: { model3D: true, material: true, tool: true },
+    include: { model3D: { select: { id: true, productId: true, previewFileUrl: true, createdAt: true, updatedAt: true } }, material: true, tool: true },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -29,7 +29,7 @@ async function getProductBySlug(slug, query = {}) {
       deletedAt: null,
       ...(query.isActive !== undefined && { isActive: query.isActive }),
     },
-    include: { model3D: true, material: true, tool: true, collection: true },
+    include: { model3D: { select: { id: true, productId: true, previewFileUrl: true, createdAt: true, updatedAt: true } }, material: true, tool: true, collection: true },
   });
 }
 

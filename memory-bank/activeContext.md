@@ -1,9 +1,10 @@
 # Active Context
 
-**Updated:** Jun 4, 2026
+**Updated:** Jun 29, 2026
 
 ## Current Focus
 
+- Cart service: Redis cache added (`cart:${customerId}`, TTL 1h). All write ops invalidate cache. Falls back to Prisma if Redis unavailable.
 - All core features implemented and stable
 - Chat: customer support + internal staff-to-staff + AI standalone
 - Order payment status update endpoint added

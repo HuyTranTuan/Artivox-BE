@@ -71,7 +71,7 @@ async function getCollectionBySlug(slug) {
     include: {
       products: {
         where: { deletedAt: null },
-        include: { model3D: true, material: true, tool: true, images: true },
+        include: { model3D: { select: { id: true, productId: true, previewFileUrl: true, createdAt: true, updatedAt: true } }, material: true, tool: true, images: true },
       },
     },
   });

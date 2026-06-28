@@ -15,12 +15,10 @@ const getModels = catchAsync(async (req, res) => {
 
   if (!isAdminOrStaff) {
     data.items.forEach(item => {
-      item.has3DModel = !!item.sourceFileUrl;
-      item.fileExtension = item.sourceFileUrl?.split('.').pop() || "glb";
-      delete item.sourceFileUrl;
+      item.has3DModel = !!(item.model3D?.previewFileUrl);
+      item.fileExtension = item.model3D ? (item.slug ? item.slug.split('.').pop() : "glb") : "glb";
       if (item.model3D) {
-        item.model3D.fileExtension = item.model3D.sourceFileUrl?.split('.').pop() || "glb";
-        delete item.model3D.sourceFileUrl;
+        item.model3D.fileExtension = "glb"; // extension derived at proxy time
       }
     });
   }
@@ -76,8 +74,7 @@ const getModelBySlug = catchAsync(async (req, res) => {
     }
     delete data.sourceFileUrl;
     if (data.model3D) {
-      data.model3D.fileExtension = data.model3D.sourceFileUrl ? data.model3D.sourceFileUrl.split('.').pop() : data.fileExtension;
-      delete data.model3D.sourceFileUrl;
+      data.model3D.fileExtension = data.fileExtension || "glb";
     }
   }
 

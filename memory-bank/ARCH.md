@@ -1,6 +1,6 @@
 # ARCH: Backend Architecture
 
-**Updated:** May 17, 2026
+**Updated:** Jun 29, 2026
 
 ## Overview
 
@@ -199,7 +199,7 @@ Thin layer: validate request, call service, return standardized response
 | GET    | /admin/dashboard       | ✅ ADMIN | Admin dashboard (all stats) |
 | GET    | /admin/staff/dashboard | ✅       | Staff personal dashboard    |
 
-### Search (4 endpoints) - 🆕 PENDING
+### Search (4 endpoints) - ✅
 
 | Method | Endpoint          | Auth | Purpose                                 |
 | ------ | ----------------- | ---- | --------------------------------------- |
@@ -337,39 +337,20 @@ Every resource follows the same pattern:
 
 ---
 
-## 🆕 Pending Implementation (May 20, 2026)
+## Recent Changes (Jun 29, 2026)
 
-### Staff Dashboard
+### Cart Redis Cache
 
-- **Endpoint:** `GET /admin/staff/dashboard` (authenticated)
-- **Location:** Add to `admin.service.js` + `admin.controller.js`
-- **Returns:** Personal stats (orders handled, revenue, chat rooms, pending approvals)
-- **Queries:** Filter by staffId - recent orders, top customers, order status distribution
+- `cart.service.js` now uses Redis cache-first strategy
+- Key: `cart:{customerId}`, TTL: 3600s (1h)
+- All write ops (`addToCart`, `updateCartItem`, `removeFromCart`) call `invalidateCache`
+- Graceful fallback to Prisma if Redis unavailable
 
-### Search APIs (4 variants)
+## Notes
 
-1. **Global:** `GET /search?q=...` - All products + collections
-2. **Models:** `GET /search/models?q=...&collectionId&priceMin&sort` - Advanced
-3. **Materials:** `GET /search/materials?q=...&type=FDM&unit=GRAM` - Type/unit filters
-4. **Tools:** `GET /search/tools?q=...&priceMin&priceMax` - Specs search
-
-- **Location:** Create `src/services/search.service.js`, `src/controllers/search.controller.js`, `src/routes/search.route.js`
-
-### Schema Issues Found
-
-1. 🔴 Missing `Order.assignedAdminId` - breaks admin dashboard
-2. 🟡 Wrong order status queries - should check `paymentStatus` not `status`
-3. 🟡 Notification design flaw - should use typed relations
-4. 🟡 Missing email verification tokens
-5. 🟠 No Cart model - performance impact
-
-- **Usage**: `npm run prisma:generate` (never `npx prisma generate`)
-- **Critical**: @prisma/client version must match prisma CLI version (both v7+)
-
-- **AI API Key Resolution**: Multiple env var names supported
-  - Primary: AI_API_KEY, GROQ_API_KEY, OPENAI_API_KEY
-  - Fallback: OPENROUTER_GATEWAY_API_KEY, VERCEL_GATEWAY_API_KEY
-  - The service auto-resolves in priority order
+- `npm run prisma:generate` (never `npx prisma generate`)
+- @prisma/client version must match prisma CLI (both v7+)
+- AI API key resolution: `AI_API_KEY` → `GROQ_API_KEY`/`OPENAI_API_KEY` → `OPENROUTER_GATEWAY_API_KEY`/`VERCEL_GATEWAY_API_KEY`
 
 ## Security Headers
 

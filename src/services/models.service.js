@@ -74,7 +74,7 @@ async function getModelBySlug(slug, query = {}) {
 
   return {
     ...product,
-    sourceFileUrl: product.model3D?.sourceFileUrl || "",
+    sourceFileUrl: "",
     previewFileUrl: product.model3D?.previewFileUrl || "",
     images: product.images?.map(img => ({ ...img, url: getSecureImageUrl(img.url) }))
   };

@@ -148,7 +148,7 @@ async function searchModels(query, filters = {}, page = 1, limit = 20, sortBy = 
       ratingAvg: true,
       stock: true,
       model3D: {
-        select: { fileUrl: true },
+        select: { id: true, productId: true, previewFileUrl: true, createdAt: true, updatedAt: true },
       },
       collection: {
         select: { id: true, name: true, slug: true },

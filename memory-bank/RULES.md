@@ -1,6 +1,6 @@
 # RULES: Code Standards
 
-**Updated:** May 17, 2026
+**Updated:** Jun 29, 2026
 
 ## JavaScript Style
 
@@ -153,35 +153,9 @@ Or error:
 | View DB       | `npx prisma studio`                    |
 | Test endpoint | Use curl or Postman                    |
 
----
+## Notes (Jun 2026)
 
-## 📋 AUDIT NOTES (May 20, 2026)
-
-### Task 1: Customer Register ✅
-
-- **Status:** WORKING - all fields validated and saved correctly
-- **Key Field:** `gender` enum (M, F) - must use uppercase
-- **Flow:** Register → Save all fields → Return tokens + user object
-
-### Task 2: Staff Dashboard 🆕
-
-- **Endpoint:** `GET /admin/staff/dashboard`
-- **Status:** PENDING - needs service + controller implementation
-- **Returns:** Personal stats (orders, revenue, chat rooms, pending approvals)
-- **Location:** Add to `admin.service.js` + `admin.controller.js`
-
-### Task 3: Prisma Schema Audit ✅
-
-- **Critical Issues:** 1
-- **Medium Issues:** 3
-- **Low Issues:** 1
-- **See STATE.md for full details**
-
-### Task 4: Search APIs 🆕
-
-- **Status:** PENDING - 4 endpoints designed
-- **API 1:** `GET /search?q=...` - Global search
-- **API 2:** `GET /search/models?q=...&collectionId&priceMin&sort`
-- **API 3:** `GET /search/materials?q=...&type&unit`
-- **API 4:** `GET /search/tools?q=...&priceMin&priceMax`
-- **Location:** Create `search.service.js` + `search.controller.js` + `search.route.js`
+- Staff dashboard ✅, Search ✅ — all previously pending tasks resolved
+- Cart service: Redis cache-first added (Jun 29)
+- `gender` enum: M, F (uppercase only)
+- `paymentStatus` vs `status`: order tracking uses `paymentStatus`

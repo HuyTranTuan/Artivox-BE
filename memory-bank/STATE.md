@@ -1,6 +1,6 @@
 # STATE: ARTIVOX BACKEND
 
-**Updated:** Jun 4, 2026 | **Status:** ✅ PRODUCTION READY
+**Updated:** Jun 29, 2026 | **Status:** ✅ PRODUCTION READY
 
 ## Features Complete
 
@@ -20,6 +20,7 @@
 | Mail | ✅ | Nodemailer (verify email) |
 | Cron | ✅ | pg_dump → Google Drive daily 3AM |
 | AI | ✅ | OpenAI/Groq/OpenRouter multi-key resolution |
+| Cart Cache | ✅ | Redis cache layer: `cart:{customerId}` TTL 1h, invalidate on all writes, fallback to Prisma |
 
 ## Routes Summary
 
@@ -38,11 +39,9 @@
 - `/customer-activity-log` — activity logs
 - `/location` — provinces, wards
 
-## Current Known Issues (May → Jun 2026)
+## Recent Changes (Jun 29, 2026)
 
-- All previously noted schema issues resolved
-- Search endpoints implemented (global + models/materials/tools)
-- Staff dashboard endpoint live at `GET /admin/staff/dashboard`
+- `cart.service.js`: Redis cache-first layer added. Key: `cart:{customerId}`, TTL 1h. All writes (`addToCart`, `updateCartItem`, `removeFromCart`) call `invalidateCache`. Graceful fallback if Redis unavailable.
 
 ## Stack
 

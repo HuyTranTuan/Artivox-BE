@@ -21,9 +21,6 @@ function buildPublicUrl(key) {
 
 /**
  * Upload a single image buffer to R2 and return the public URL.
- * @param {Buffer} buffer
- * @param {string} key - R2 object key
- * @returns {Promise<string>} public URL
  */
 async function uploadToR2(buffer, key) {
   const bucket = getBucketName();
@@ -66,11 +63,6 @@ async function uploadRawToR2(buffer, key, contentType) {
 /**
  * Upload product images to R2 and create ProductImage records.
  * Path convention: products/{slug}/thumbnail-before.webp, thumbnail-after.webp, gallery-{i}.webp
- *
- * @param {BigInt} productId
- * @param {string} slug - product slug for R2 key prefix
- * @param {object} files - multer files object { thumbnail_before, thumbnail_after, gallery }
- * @returns {Promise<string[]>} array of created image URLs
  */
 async function uploadProductImages(productId, slug, files) {
   const urls = [];

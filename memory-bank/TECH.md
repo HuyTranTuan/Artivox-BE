@@ -1,6 +1,6 @@
 # TECH: Stack & Setup
 
-**Updated:** May 17, 2026
+**Updated:** Jun 29, 2026
 
 ## Stack
 
@@ -246,7 +246,7 @@ timeout: 30000,        // Request timeout in ms
 
 - Pagination: All list endpoints (use `limit` and `skip`)
 - Indexes: Optimized for common queries
-- Caching: Redis ready
+- Caching: **Cart** uses Redis cache-first (`cart:{customerId}`, TTL 1h); catalog GET routes use `cacheMiddleware(key, ttl)`
 - Connection pooling: Built-in Prisma
 - Rate limiting: Ready to implement
 
@@ -477,48 +477,14 @@ ai.generateAIResponse('test').then(r => console.log(r));
 
 ---
 
-## 🆕 Implementation Notes (May 20, 2026)
+## Implementation Notes (Jun 29, 2026)
 
-### Critical Schema Fix Required
-
-```javascript
-// In prisma/schema.prisma - Order model:
-model Order {
-  // ... existing fields
-  assignedAdminId BigInt?
-
-  // ... existing relations
-  assignedAdmin AdminUser? @relation(fields: [assignedAdminId], references: [id])
-}
-
-// In AdminUser model:
-model AdminUser {
-  // ... existing fields
-  orders Order[]
-}
-```
-
-**Why:** Admin dashboard queries use `assignedAdminId` which doesn't exist
-**Command:** `npm run prisma migrate dev --name "fix_order_admin_relation"`
-
-### Bug Fix: Order Status Queries
+### Cart Redis Cache
 
 ```javascript
-// ❌ WRONG (in admin.service.js):
-where: { status: { in: ["PAID"] } }
-
-// ✅ CORRECT:
-where: { paymentStatus: { in: ["PAID"] } }
-```
-
-**Why:** `status` enum is {COMPLETED, CANCELED, PENDING}, payment tracking is `paymentStatus`
-
-### New Search Service Pattern
-
-```javascript
-// src/services/search.service.js
-async function searchGlobal(query, type, limit) { ... }
-async function searchModels(query, filters, limit, skip, sort) { ... }
-async function searchMaterials(query, filters, limit, skip, sort) { ... }
-async function searchTools(query, filters, limit, skip, sort) { ... }
+// cart.service.js — cache-first pattern:
+// getCart: check redis → miss → Prisma → set cache (1h)
+// addToCart/updateCartItem/removeFromCart: Prisma → invalidate cache
+// Key: `cart:${customerId}`, TTL: 3600s
+// Falls back to direct Prisma if Redis unavailable
 ```
