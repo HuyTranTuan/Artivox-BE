@@ -30,6 +30,7 @@ const io = new Server(server, { cors: socketCorsConfig });
 
 // Expose io to Express controllers via req.app.get("io")
 app.set("io", io);
+app.set("trust proxy", 1);
 
 //////////// Variables ////////////
 const hostname = process.env.APP_HOST || "127.0.0.1";
